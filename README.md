@@ -1,0 +1,2 @@
+# CCLite
+A Computercraft Emulator
