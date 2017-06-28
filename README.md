@@ -1,9 +1,9 @@
-#CCLite
+# CCLite
 A Computercraft Emulator
 
 This is a for of CCLite from Gamax92. You can find it here: https://github.com/gamax92/cclite
 
-#HTTPS Support
+# HTTPS Support
 LuaSocket doesn't support HTTPS on its own and needs a helper library like LuaSec
 
 CCLite by default comes with support disabled and https requests get automatically dropped to http, which the server may or may not like.
@@ -46,7 +46,7 @@ I don't know if it works since I don't have a mac.
 
 Someone try it and tell me if you can get https working.
 
-#Configuration
+# Configuration
 CCLite allows you to configure various properties just like ComputerCraft does.
 
 The configuration is stored in (Save Folder)/CCLite.cfg
