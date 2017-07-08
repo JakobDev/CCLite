@@ -10,5 +10,5 @@ if type(cclite) == "table" then
         cclite.log("Running "..cclite.getConfig().run)
         shell.run(cclite.getConfig().run)
     end
+    shell.setPath(shell.path()..":/rom/programs/cclite")
 end
-shell.setPath(shell.path()..":/rom/programs/cclite")

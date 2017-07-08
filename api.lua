@@ -593,7 +593,7 @@ if _conf.enableAPI_cclite then
 		if type(sMessage) ~= "string" then error("Expected string",2) end
 		Screen:message(sMessage)
 	end
-    function api.cclite.setTitle( text )
+    function api.cclite.setTitle(text)
         love.window.setTitle(text)
     end
     function api.cclite.getTitle()
@@ -601,6 +601,16 @@ if _conf.enableAPI_cclite then
     end
     function api.cclite.getConfig()
         return _conf
+    end
+    function api.cclite.screenshot()
+        local screenshot = love.graphics.newScreenshot()
+        local name = 'CCLite_'..os.time() .. '.png'
+        print("Saved Screenshot as "..name)
+        Screen:message("Saved Screenshot as "..name)
+        screenshot:encode('png', "/screenshots/"..name)
+    end
+    function api.cclite.getVersion()
+        return "2.1"
     end
     --[[
     function api.cclite.setScreenSize( w, h )
@@ -654,6 +664,7 @@ if _conf.enableAPI_http then
 			if not https_alert then
 				https_alert=true
 				Screen:message("Warning: No HTTPS support enabled, falling back to HTTP")
+                print("Warning: No HTTPS support enabled, falling back to HTTP")
 			end
 			print("Warning: Attempted to load page \"" .. goodUrl .. "\" without HTTPS support enabled")
 		end
@@ -706,10 +717,22 @@ function api.os.day()
 	return math.floor((love.timer.getTime()-Computer.state.startTime)/1200)
 end
 function api.os.setComputerLabel(label)
-    print('Set Computer Label to "'..label..'"')
-	if type(label) == "function" then label = nil end
-	if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
-	Computer.state.label = label:sub(1,32)
+    if nTime ~= nil and type( label ) ~= "string" then
+        error( "bad argument #1 (expected string, got " .. type( label ) .. ")", 2 ) 
+    end
+    if label == nil then
+        print("Clear Computer Label")
+        Computer.state.label = nil
+        if _conf.save_label == true then
+            love.filesystem.remove("/label/"..tostring(_conf.computer_id)..".txt")
+        end
+    else
+        print('Set Computer Label to "'..label..'"')
+        Computer.state.label = label:sub(1,32)
+        if _conf.save_label == true then
+            love.filesystem.write("/label/"..tostring(_conf.computer_id)..".txt",tostring(label))
+        end
+    end
 end
 function api.os.getComputerLabel()
 	return Computer.state.label
@@ -719,7 +742,9 @@ function api.os.queueEvent(event, ...)
 	table.insert(Computer.eventQueue, {event, ...})
 end
 function api.os.startTimer(nTimeout)
-	if type(nTimeout) ~= "number" then error("Expected number",2) end
+    if type(nTimeout) ~= "number" then
+		error("bad argument #1 (expected number, got ".. type( nTimeout ) .. ")",2)
+	end
 	nTimeout = math.ceil(nTimeout*20)/20
 	if nTimeout < 0.05 then nTimeout = 0.05 end
 	Computer.actions.timers[Computer.actions.lastTimer] = math.floor(love.timer.getTime()*20)/20 + nTimeout
@@ -727,7 +752,9 @@ function api.os.startTimer(nTimeout)
 	return Computer.actions.lastTimer-1
 end
 function api.os.setAlarm(nTime)
-	if type(nTime) ~= "number" then error("Expected number",2) end
+    if type(nTime) ~= "number" then
+		error("bad argument #1 (expected number, got ".. type( nTime ) .. ")",2)
+	end
 	if nTime < 0 or nTime > 24 then
 		error("Number out of range",2)
 	end
@@ -740,13 +767,17 @@ function api.os.setAlarm(nTime)
 	return Computer.actions.lastAlarm-1
 end
 function api.os.cancelTimer(id)
-	if type(id) ~= "number" then error("Expected number",2) end
+    if type(id) ~= "number" then
+		error("bad argument #1 (expected number, got ".. type( id ) .. ")",2)
+	end
 	if id == id then
 		Computer.actions.timers[id] = nil
 	end
 end
 function api.os.cancelAlarm(id)
-	if type(id) ~= "number" then error("Expected number",2) end
+     if type(id) ~= "number" then
+		error("bad argument #1 (expected number, got ".. type( id ) .. ")",2)
+	end
 	if id == id then
 		Computer.actions.alarms[id] = nil
 	end
@@ -858,8 +889,8 @@ end
 
 function api.fs.getDir(...)
 	local path = ...
-	if type(path) ~= "string" or select("#",...) ~= 1 then
-		error("Expected string",2)
+	if type(path) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( path ) .. ")",2)
 	end
 	path = cleanPath(path, true)
 	if #path == 0 then
@@ -870,8 +901,8 @@ function api.fs.getDir(...)
 end
 function api.fs.find(...)
 	local spec = ...
-	if type(spec) ~= "string" or select("#",...) ~= 1 then
-		error("Expected string",2)
+	if type(spec) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( spec ) .. ")",2)
 	end
 	spec = cleanPath(spec, true)
 	local results = {}
@@ -881,10 +912,12 @@ end
 local fsmodes = {r=FileReadHandle, rb=FileBinaryReadHandle, w=FileWriteHandle, a=FileWriteHandle, wb=FileBinaryWriteHandle, ab=FileBinaryWriteHandle}
 function api.fs.open(...)
 	local path, mode = ...
-	if type(path) ~= "string" or type(mode) ~= "string" or select("#",...) ~= 2 then
-		error("Expected string, string",2)
+	if type(path) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( path ) .. ")",2)
 	end
-
+    if type(mode) ~= "string" then
+		error("bad argument #2 (expected string, got ".. type( mode ) .. ")",2)
+	end
 	path = cleanPath(path)
 	if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
 
@@ -897,8 +930,8 @@ function api.fs.open(...)
 end
 function api.fs.list(...)
 	local path = ...
-	if type(path) ~= "string" or select("#",...) ~= 1 then
-		error("Expected string",2)
+	if type(path) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( path ) .. ")",2)
 	end
 
 	path = cleanPath(path)
@@ -911,8 +944,8 @@ function api.fs.list(...)
 end
 function api.fs.exists(...)
 	local path = ...
-	if type(path) ~= "string" or select("#",...) ~= 1 then
-		error("Expected string",2)
+	if type(path) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( path ) .. ")",2)
 	end
 
 	path = cleanPath(path)
@@ -922,8 +955,8 @@ function api.fs.exists(...)
 end
 function api.fs.isDir(...)
 	local path = ...
-	if type(path) ~= "string" or select("#",...) ~= 1 then
-		error("Expected string",2)
+    if type(path) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( path ) .. ")",2)
 	end
 
 	path = cleanPath(path)
@@ -933,16 +966,16 @@ function api.fs.isDir(...)
 end
 function api.fs.isReadOnly(...)
 	local path = ...
-	if type(path) ~= "string" or select("#",...) ~= 1 then
-		error("Expected string",2)
+    if type(path) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( path ) .. ")",2)
 	end
 	path = cleanPath(path)
 	return path == "rom" or path:sub(1, 4) == "rom/"
 end
 function api.fs.getName(...)
 	local path = ...
-	if type(path) ~= "string" or select("#",...) ~= 1 then
-		error("Expected string",2)
+	if type(path) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( path ) .. ")",2)
 	end
 	path = cleanPath(path, true)
 	if path == "" then
@@ -953,8 +986,8 @@ function api.fs.getName(...)
 end
 function api.fs.getDrive(...)
 	local path = ...
-	if type(path) ~= "string" or select("#",...) ~= 1 then
-		error("Expected string",2)
+	if type(path) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( path ) .. ")",2)
 	end
 
 	path = cleanPath(path)
@@ -968,8 +1001,8 @@ function api.fs.getDrive(...)
 end
 function api.fs.getSize(...)
 	local path = ...
-	if type(path) ~= "string" or select("#",...) ~= 1 then
-		error("Expected string",2)
+	if type(path) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( path ) .. ")",2)
 	end
 
 	path = cleanPath(path)
@@ -988,8 +1021,8 @@ end
 
 function api.fs.getFreeSpace(...)
 	local path = ...
-	if type(path) ~= "string" or select("#",...) ~= 1 then
-		error("Expected string",2)
+	if type(path) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( path ) .. ")",2)
 	end
 
 	path = cleanPath(path)
@@ -1003,8 +1036,8 @@ end
 
 function api.fs.makeDir(...)
 	local path = ...
-	if type(path) ~= "string" or select("#",...) ~= 1 then
-		error("Expected string",2)
+	if type(path) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( path ) .. ")",2)
 	end
 
 	path = cleanPath(path)
@@ -1062,8 +1095,11 @@ api._copytree = copytree
 
 function api.fs.move(...)
 	local fromPath, toPath = ...
-	if type(fromPath) ~= "string" or type(toPath) ~= "string" or select("#",...) ~= 2 then
-		error("Expected string, string",2)
+	if type(fromPath) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( fromPath ) .. ")",2)
+	end
+    if type(toPath) ~= "string" then
+		error("bad argument #2 (expected string, got ".. type( toPath ) .. ")",2)
 	end
 
 	fromPath = cleanPath(fromPath)
@@ -1380,6 +1416,7 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		_LUAJ_VERSION="2.0.3",
 		_MC_VERSION="1.9.4",
 		_VERSION="Lua 5.1",
+        _CC_DEFAULT_SETTINGS = _conf.CC_DEFAULT_SETTINGS,
 		__inext = api.inext,
 		tostring = api.tostring,
 		tonumber = api.tonumber,
@@ -1518,6 +1555,8 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
             setTitle = api.cclite.setTitle,
             getTitle = api.cclite.getTitle,
             getConfig = api.cclite.getConfig,
+            screenshot = api.cclite.screenshot,
+            getVersion = api.cclite.getVersion,
 		}
 	end
 	api.env.rs = api.env.redstone

@@ -37,7 +37,13 @@ local defaultConf = [[_conf = {
     
     --Choose if the Computer is a Advanced Computer
     computer_isAdvanced = true,
-
+    
+    --Choose if the label shoulb be saved
+    save_label = true,
+    
+    --Set the default settings of CraftOS
+    CC_DEFAULT_SETTINGS="",
+    
 	--Mappings for controlpad
 	ctrlPad = {
 		top = "w",
@@ -62,22 +68,28 @@ function validateConfig(cfgData,setup)
 		stat, err = pcall(cfgFunc)
 		if stat == false then
 			table.insert(messageCache,err)
+            print(err)
 		elseif tmpenv._conf == nil then
 			table.insert(messageCache, "No value set for config")
+            print("No value set for config")
 		elseif type(tmpenv._conf) ~= "table" then
 			table.insert(messageCache, "Invalid value for config")
+            print("Invalid value for config")
 		else
 			-- Verify configuration
 			for k,v in pairs(_conf) do
 				if tmpenv._conf[k] == nil then
 					table.insert(messageCache, "No value set for config:"..tostring(k))
+                    print("No value set for config:"..tostring(k))
 				end
 			end
 			for k,v in pairs(tmpenv._conf) do
 				if _conf[k] == nil then
 					table.insert(messageCache, "Unknown config entry config:"..tostring(k))
+                    print("Unknown config entry config:"..tostring(k))
 				elseif type(v) ~= type(_conf[k]) then
 					table.insert(messageCache, "Invalid value for config:"..tostring(k))
+                    print("Invalid value for config:"..tostring(k))
 				else
 					_conf[k] = v
 				end
@@ -96,6 +108,7 @@ else
 	love.filesystem.write("/CCLite.cfg", defaultConf)
 end
 
+function init()
 love.window.setTitle("CCLite")
 love.window.setIcon(love.image.newImageData("res/icon.png"))
 love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), {vsync = false})
@@ -173,6 +186,7 @@ keys = {
 	["numlock"] = 69,
 	["scrolllock"] = 70,
 	["pause"] = 197,
+    ["space"] = 57,
 	
 	["f1"] = 59,
 	["f2"] = 60,
@@ -199,7 +213,7 @@ keys = {
 	["ralt"] = 184,
 	["lalt"] = 56,
 }
-
+end
 -- Patch love.keyboard.isDown to make ctrl checking easier
 local olkiD = love.keyboard.isDown
 function love.keyboard.isDown(...)
@@ -267,7 +281,9 @@ function Computer:start()
 	Computer.state.fg = 1
 	Computer.state.blink = false
 	Computer.state.startTime = math.floor(love.timer.getTime()*20)/20
-    
+    if love.filesystem.exists("/label/"..tostring(_conf.computer_id)..".txt") and _conf.save_label == true then
+        api.os.setComputerLabel(love.filesystem.read("/label/"..tostring(_conf.computer_id)..".txt"):gsub("\n",""))
+    end
     print("Starting CraftOS")
 	local fn, err = loadstring(love.filesystem.read("/lua/bios.lua"),"@bios")
 
@@ -377,6 +393,10 @@ function love.load( args )
 	_conf.mobileMode = _conf.mobileMode == "true" or _conf.mobileMode
     _conf.computer_id = tonumber(_conf.computer_id)
     _conf.computer_isAdvanced = _conf.computer_isAdvanced == "true" or _conf.computer_isAdvanced
+    _conf.save_label = _conf.save_label == "true" or _conf.save_label
+    
+    init()
+
 	if love.system.getOS() == "Android" then
 		love.keyboard.setTextInput(true)
 	end
@@ -398,12 +418,20 @@ function love.load( args )
 	if not love.filesystem.exists("data/") then
 		love.filesystem.createDirectory("data/")
 	end
+    
+    if not love.filesystem.exists("screenshots/") then
+		love.filesystem.createDirectory("screenshots/")
+	end
+    
+    if not love.filesystem.exists("label/") then
+		love.filesystem.createDirectory("label/")
+	end
 
-	if not love.filesystem.exists("data/0/") then
-		love.filesystem.createDirectory("data/0/") -- Make the user data folder
+	if not love.filesystem.exists("data/"..tostring(_conf.computer_id).."/") then
+		love.filesystem.createDirectory("data/"..tostring(_conf.computer_id).."/") -- Make the user data folder
 	end
 	
-	vfs.mount("/data/0","/","hdd")
+	vfs.mount("/data/"..tostring(_conf.computer_id),"/","hdd")
 	vfs.mount("/lua/rom","/rom","rom")
 	
 	love.keyboard.setKeyRepeat(true)
@@ -464,11 +492,16 @@ function love.textinput(unicode)
 		end
 		if validCharacter(unicode:byte()) then
 			table.insert(Computer.eventQueue, {"char", unicode})
+        else
+            table.insert(Computer.eventQueue, {"char", "?"})
 		end
 	end
 end
 
 function love.keypressed(key)
+    if love.keyboard.isDown("escape") then
+        api.cclite.screenshot()
+    end
 	if love.keyboard.isDown("ctrl") then
 		if Computer.actions.terminate == nil and love.keyboard.isDown("t") then
 			Computer.actions.terminate = love.timer.getTime()
@@ -493,6 +526,19 @@ function love.keypressed(key)
 			cliptext = cliptext:sub(1, nloc - 1)
 		end
 		if cliptext ~= "" then
+            --[[
+            local pastetext = ""
+            for i = 1, #cliptext do
+                 local c = cliptext:sub(i,i)
+                 if validCharacter(c:byte()) then
+			        pastetext = pastetext..c
+                 else
+                    print(c)
+                    pastetext = pastetext.."?"
+                 end
+            end
+            ]]--
+            print("Paste "..cliptext)
 			table.insert(Computer.eventQueue, {"paste", cliptext})
 		end
 	elseif isrepeat and love.keyboard.isDown("ctrl") and (key == "t" or key == "s" or key == "r") then
@@ -524,6 +570,10 @@ love.focus = love.visible
 	monitor_touch
 	monitor_resize
 ]]
+
+function love.quit()
+    print("Goodbye")
+end
 
 local function updateShortcut(name, key1, key2, cb)
 	if Computer.actions[name] ~= nil then

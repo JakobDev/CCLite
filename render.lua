@@ -18,25 +18,6 @@ local COLOUR_RGB = {
 	BLACK = {25, 25, 25},
 }
 
-local COLOUR_CODE = {
-	[1] = COLOUR_RGB.WHITE,
-	[2] = COLOUR_RGB.ORANGE,
-	[4] =  COLOUR_RGB.MAGENTA,
-	[8] = COLOUR_RGB.LIGHT_BLUE,
-	[16] = COLOUR_RGB.YELLOW,
-	[32] = COLOUR_RGB.LIME,
-	[64] = COLOUR_RGB.PINK,
-	[128] = COLOUR_RGB.GRAY,
-	[256] = COLOUR_RGB.LIGHT_GRAY,
-	[512] = COLOUR_RGB.CYAN,
-	[1024] = COLOUR_RGB.PURPLE,
-	[2048] = COLOUR_RGB.BLUE,
-	[4096] = COLOUR_RGB.BROWN,
-	[8192] = COLOUR_RGB.GREEN,
-	[16384] = COLOUR_RGB.RED,
-	[32768] = COLOUR_RGB.BLACK,
-}
-
 Screen = {
 	sWidth = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2),
 	sHeight = (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2),
@@ -87,7 +68,7 @@ local glyphs = ""
 for i = 32,126 do
 	glyphs = glyphs .. string.char(i)
 end
-Screen.font = love.graphics.newImageFont("res/minecraft.png",glyphs)
+Screen.font = love.graphics.newImageFont("res/font.png",glyphs)
 Screen.font:setFilter("nearest","nearest")
 love.graphics.setFont(Screen.font)
 love.graphics.setLineWidth(_conf.terminal_guiScale)
@@ -195,7 +176,7 @@ function Screen:draw()
 
 		-- Render cursor
 		if Computer.state.blink and self.showCursor then
-			setColor(COLOUR_CODE[Computer.state.fg])
+			setColor(self.COLOUR_CODE[Computer.state.fg])
 			lprint("_", (Computer.state.cursorX - 1) * self.pixelWidth + tOffset["_"] + _conf.terminal_guiScale, (Computer.state.cursorY - 1) * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 		end
 	end

@@ -13,4 +13,19 @@ Follow @DanTwoHundred on Twitter!
 To help contribute to ComputerCraft, browse the source code at https://github.com/dan200/ComputerCraft.
 
 GitHub Contributors:
-${gitcontributors}
+apemanzilla
+Bartek Bok
+Bomb Bloke
+Cruor
+gegy1000
+Jonathan Leitschuh
+Lignum
+Logan Davis
+MineRobber___T
+Nephi (AKA Lupus590)
+ObloxCC
+Restioson
+SquidDev
+Tim Ittermann
+Wilma456
+Wojbie
