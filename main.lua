@@ -8,6 +8,9 @@ local defaultConf = [[_conf = {
 	-- Enable the "cclite" API on Computers
 	enableAPI_cclite = true,
 	
+    -- Enable the "pocket" API on Computers
+    enableAPI_pocket = false,
+
 	-- The height of Computer screens, in characters
 	terminal_height = 19,
 	
@@ -33,13 +36,16 @@ local defaultConf = [[_conf = {
 	mobileMode = false,
 	
     --The ID of the Computer
-    computer_id = 0,
+    id = 0,
     
     --Choose if the Computer is a Advanced Computer
-    computer_isAdvanced = true,
+    advanced = true,
     
     --Choose if the label shoulb be saved
     save_label = true,
+    
+    --Unrandomize
+    unrandomize = false,
     
     --Set the default settings of CraftOS
     CC_DEFAULT_SETTINGS="",
@@ -118,6 +124,7 @@ bit = require("bit")
 require("render")
 require("api")
 require("vfs")
+require("error")
 
 -- Test if HTTPS is working
 if _conf.useLuaSec then
@@ -281,14 +288,15 @@ function Computer:start()
 	Computer.state.fg = 1
 	Computer.state.blink = false
 	Computer.state.startTime = math.floor(love.timer.getTime()*20)/20
-    if love.filesystem.exists("/label/"..tostring(_conf.computer_id)..".txt") and _conf.save_label == true then
-        api.os.setComputerLabel(love.filesystem.read("/label/"..tostring(_conf.computer_id)..".txt"):gsub("\n",""))
+    if love.filesystem.exists("/label/"..tostring(_conf.id)..".txt") and _conf.save_label == true then
+        api.os.setComputerLabel(love.filesystem.read("/label/"..tostring(_conf.id)..".txt"):gsub("\n",""))
     end
     print("Starting CraftOS")
 	local fn, err = loadstring(love.filesystem.read("/lua/bios.lua"),"@bios")
-
+    
 	if not fn then
 		print(err)
+        errorscreen(err)
 		return
 	end
 
@@ -328,6 +336,25 @@ function Computer:stop(reboot)
 	self.actions.sockets = {}
 	self.eventQueue = {}
 	self.eventFilter = nil
+    
+    Screen.COLOUR_CODE = {
+	    [1] = COLOUR_RGB.WHITE,
+	    [2] = COLOUR_RGB.ORANGE,
+	    [4] =  COLOUR_RGB.MAGENTA,
+	    [8] = COLOUR_RGB.LIGHT_BLUE,
+	    [16] = COLOUR_RGB.YELLOW,
+	    [32] = COLOUR_RGB.LIME,
+	    [64] = COLOUR_RGB.PINK,
+	    [128] = COLOUR_RGB.GRAY,
+	    [256] = COLOUR_RGB.LIGHT_GRAY,
+	    [512] = COLOUR_RGB.CYAN,
+	    [1024] = COLOUR_RGB.PURPLE,
+	    [2048] = COLOUR_RGB.BLUE,
+	    [4096] = COLOUR_RGB.BROWN,
+	    [8192] = COLOUR_RGB.GREEN,
+	    [16384] = COLOUR_RGB.RED,
+	    [32768] = COLOUR_RGB.BLACK,
+    }
 end
 
 function Computer:resume(...)
@@ -376,26 +403,45 @@ end
 return args,options
 end
 
+function toboolean(value)
+    if value == "true" or value == true then
+        return true
+    else
+        return false
+    end
+end
+
 function love.load( args )
     local args,ops = parseArgs(args)
     for k,v in pairs(ops) do
         _conf[k] = v
     end
-	_conf.enableAPI_http = _conf.enableAPI_http == "true" or _conf.enableAPI_http
-	_conf.enableAPI_cclite = _conf.enableAPI_cclite == "true" or _conf.enableAPI_cclite
+	_conf.enableAPI_http = toboolean(_conf.enableAPI_http)
+	_conf.enableAPI_cclite = toboolean(_conf.enableAPI_cclite)
+    _conf.enableAPI_pocket = toboolean(_conf.enableAPI_pocket)
 	_conf.terminal_height = tonumber(_conf.terminal_height)
 	_conf.terminal_width = tonumber(_conf.terminal_width)
 	_conf.terminal_guiScale = tonumber(_conf.terminal_guiScale)
-	_conf.cclite_showFPS = _conf.cclite_showFPS == "true" or _conf.cclite_showFPS
+	_conf.cclite_showFPS = toboolean(_conf.cclite_showFPS)
 	_conf.lockfps = tonumber(_conf.lockfps)
-	_conf.useLuaSec = _conf.useLuaSec == "true" or _conf.useLuaSec
-	_conf.useCRLF = _conf.useCRLF == "true" or _conf.useCRLF
-	_conf.mobileMode = _conf.mobileMode == "true" or _conf.mobileMode
-    _conf.computer_id = tonumber(_conf.computer_id)
-    _conf.computer_isAdvanced = _conf.computer_isAdvanced == "true" or _conf.computer_isAdvanced
-    _conf.save_label = _conf.save_label == "true" or _conf.save_label
+	_conf.useLuaSec = toboolean(_conf.useLuaSec)
+	_conf.useCRLF = toboolean(_conf.useCRLF)
+	_conf.mobileMode = toboolean(_conf.mobileMode)
+    _conf.id = tonumber(_conf.id)
+    _conf.advanced = toboolean(_conf.advanced)
+    _conf.save_label = toboolean(_conf.save_label)
+    _conf.unrandomize = toboolean(_conf.unrandomize)
+
+    --For Commandline User
+    if _conf.pocket == true then
+        _conf.terminal_height = 20
+        _conf.terminal_width = 26
+        _conf.enableAPI_pocket = true
+    end
     
     init()
+
+    print("Save Directory is "..love.filesystem.getSaveDirectory( ))
 
 	if love.system.getOS() == "Android" then
 		love.keyboard.setTextInput(true)
@@ -427,11 +473,11 @@ function love.load( args )
 		love.filesystem.createDirectory("label/")
 	end
 
-	if not love.filesystem.exists("data/"..tostring(_conf.computer_id).."/") then
-		love.filesystem.createDirectory("data/"..tostring(_conf.computer_id).."/") -- Make the user data folder
+	if not love.filesystem.exists("data/"..tostring(_conf.id).."/") then
+		love.filesystem.createDirectory("data/"..tostring(_conf.id).."/") -- Make the user data folder
 	end
 	
-	vfs.mount("/data/"..tostring(_conf.computer_id),"/","hdd")
+	vfs.mount("/data/"..tostring(_conf.id),"/","hdd")
 	vfs.mount("/lua/rom","/rom","rom")
 	
 	love.keyboard.setKeyRepeat(true)
@@ -443,7 +489,7 @@ function love.mousereleased(x, y, button)
 	local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
 	local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
 
-	if Computer.mouse.isPressed and (button == "l" or button == "m" or button == "r") then
+	if Computer.mouse.isPressed and (button == "l" or button == "m" or button == "r") and _conf.advanced == true then
 		Computer.mouse.lastTermX = termMouseX
 		Computer.mouse.lastTermY = termMouseY
 		if button == "l" then button = 1
@@ -457,7 +503,7 @@ end
 
 function love.mousepressed(x, y, button)
 	if x > 0 and x < Screen.sWidth and y > 0 and y < Screen.sHeight then -- Within screen bounds.
-        if _conf.computer_isAdvanced == true then
+        if _conf.advanced == true then
             local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
 	        local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
             Computer.mouse.isPressed = true
@@ -475,7 +521,7 @@ function love.mousepressed(x, y, button)
 end
 
 function love.wheelmoved(x, y)
-    if _conf.computer_isAdvanced == true then
+    if _conf.advanced == true then
         if y > 0 then
         table.insert(Computer.eventQueue, {"mouse_scroll", -1, termMouseX, termMouseY}) 
         elseif y < 0 then
@@ -502,11 +548,15 @@ function love.keypressed(key)
     if love.keyboard.isDown("escape") then
         api.cclite.screenshot()
     end
+    if key == "menu" then
+        love.keyboard.setTextInput(true)
+    end
 	if love.keyboard.isDown("ctrl") then
 		if Computer.actions.terminate == nil and love.keyboard.isDown("t") then
 			Computer.actions.terminate = love.timer.getTime()
 		elseif Computer.actions.shutdown == nil and love.keyboard.isDown("s") then
-			Computer.actions.shutdown =  love.timer.getTime()
+			--Computer.actions.shutdown =  love.timer.getTime()
+            api.os.shutdown()
 		elseif Computer.actions.reboot == nil   and love.keyboard.isDown("r") then
 			Computer.actions.reboot =    love.timer.getTime()
 		end
@@ -572,7 +622,29 @@ love.focus = love.visible
 ]]
 
 function love.quit()
+    --Delete Folder if empty
+    if #vfs.getDirectoryItems("/") == 1 then
+        love.filesystem.remove("/data/"..tostring(_conf.id))
+    end
     print("Goodbye")
+end
+
+function love.filedropped( file )
+local sName = api.fs.getName(file:getFilename())
+if api.fs.exists("/"..sName) == true then
+    local tButtons = {"Yes", "No",enterbutton = 1, escapebutton = 2}
+    local choose = love.window.showMessageBox("File exists", 'The file "'..sName..'" exists already. Do you want to override it?', tButtons)
+    if choose == 1 then
+        love.filesystem.remove("data/"..tostring(_conf.id).."/"..sName)
+    elseif choose == 2 then
+        return
+    end
+end
+file:open("r")
+love.filesystem.write("data/"..tostring(_conf.id).."/"..sName,file:read())
+file:close()
+print("Dropped "..sName)
+table.insert(messageCache, "Dropped "..sName)
 end
 
 local function updateShortcut(name, key1, key2, cb)
@@ -710,7 +782,9 @@ function Computer:update()
 			self.mouse.lastTermX = termMouseX
 			self.mouse.lastTermY = termMouseY
 
-			table.insert (self.eventQueue, {"mouse_drag", love.mouse.isDown(2) and 2 or 1, termMouseX, termMouseY})
+            if _conf.advanced == true then
+			    table.insert (self.eventQueue, {"mouse_drag", love.mouse.isDown(2) and 2 or 1, termMouseX, termMouseY})
+            end
 		end
 	end
 
@@ -720,6 +794,10 @@ function Computer:update()
 	for i=1, #self.eventQueue do
 		local event = self.eventQueue[1]
 		table.remove(self.eventQueue,1)
+        if type(event) ~= "table" then
+            print("CraftOS has stoped working")
+            return
+        end
 		if self.eventFilter == nil or event[1] == self.eventFilter or event[1] == "terminate" then
 			local ok, filter = self:resume(unpack(event))
 			if ok then
@@ -790,7 +868,6 @@ function love.run()
 			else
 				love.timer.sleep(next_time - cur_time)
 			end
-		end
 
 		if love.timer then love.timer.sleep(0.001) end
 		if Screen.dirty then
@@ -798,4 +875,5 @@ function love.run()
 			Screen.dirty = false
 		end
 	end
+end
 end

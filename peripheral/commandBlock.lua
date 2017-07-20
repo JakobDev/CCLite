@@ -9,7 +9,9 @@ function peripheral.base.commandBlock()
 		if sMethod == "getCommand" then
 			return cmd
 		elseif sMethod == "setCommand" then
-			if type(tArgs[1]) ~= "string" then error("Expected string",2) end
+			if type(tArgs[1]) ~= "string" then 
+                error( "bad argument #1 (expected string, got " .. type( tArgs[1] ) .. ")", 2 ) 
+            end
 			cmd = tArgs[1]
 		elseif sMethod == "runCommand" then
 		end

@@ -1,10 +1,9 @@
-local COLOUR_RGB = {
+COLOUR_RGB = {
 	WHITE = {240, 240, 240},
 	ORANGE = {242, 178, 51},
 	MAGENTA = {229, 127, 216},
 	LIGHT_BLUE = {153, 178, 242},
 	YELLOW = {222, 222, 108},
-    --YELLOW = {0.87058824, 0.87058824, 0.42352942},
 	LIME = {127, 204, 25},
 	PINK = {242, 178, 204},
 	GRAY = {76, 76, 76},
@@ -131,7 +130,8 @@ local hidden = {
 }
 function Screen:draw()
 	-- Render terminal
-	if not Computer.running then
+	--if not Computer.running then
+    if Computer.reboot == true then
 		setColor(COLOUR_FULL_BLACK)
 		ldrawRect("fill", 0, 0, self.sWidth, self.sHeight)
 	else

@@ -25,6 +25,37 @@ local function lines(str)
 	return out
 end
 
+local function isLeapYear(num)
+num = num / 4
+local a,b = math.modf(num)
+if b == 0 then
+    return true
+else
+    return false
+end
+end
+
+local function getOsDayReal(source)
+local time = os.date(source)
+local day = 0
+for i=1970,time.year-1 do
+    if isLeapYear(i) then
+        day = day + 366
+    else
+        day = day + 365
+    end
+end
+local month = {31,28,31,30,31,30,31,31,30,31,30,31}
+for i=1,time.month-1 do
+    day = day + month[i]
+end
+if isLeapYear(time.year) == true and year.month > 2 then
+    day = day + 1
+end
+day = day + time.day
+return day
+end
+ 
 -- HELPER CLASSES/HANDLES
 local HTTPHandle
 if _conf.enableAPI_http then
@@ -481,7 +512,7 @@ function api.term.getPaletteColour(color)
     return Screen.COLOUR_CODE[color][1]/255,Screen.COLOUR_CODE[color][2]/255,Screen.COLOUR_CODE[color][3]/255
 end
 function api.term.isColor()
-	return _conf.computer_isAdvanced
+	return _conf.advanced
 end
 function api.term.setCursorBlink(...)
 	local bool = ...
@@ -610,7 +641,7 @@ if _conf.enableAPI_cclite then
         screenshot:encode('png', "/screenshots/"..name)
     end
     function api.cclite.getVersion()
-        return "2.1"
+        return "2.2"
     end
     --[[
     function api.cclite.setScreenSize( w, h )
@@ -638,7 +669,7 @@ if _conf.enableAPI_http then
 	api.http = {}
 	function api.http.checkURL(sUrl)
 		if type(sUrl) ~= "string" then
-			error("Expected string",2)
+			error( "bad argument #1 (expected string, got " .. type( sUrl ) .. ")", 2 )
 		end
 		local goodUrl = string_trim(sUrl)
 		if goodUrl:sub(1,4) == "ftp:" or goodUrl:sub(1,5) == "file:" or goodUrl:sub(1,7) == "mailto:" then
@@ -651,7 +682,7 @@ if _conf.enableAPI_http then
 	end
 	function api.http.request(sUrl, sParams, tHeaders)
 		if type(sUrl) ~= "string" then
-			error("Expected string",2)
+			error( "bad argument #1 (expected string, got " .. type( sUrl ) .. ")", 2 )
 		end
 		local goodUrl = string_trim(sUrl)
 		if goodUrl:sub(1,4) == "ftp:" or goodUrl:sub(1,5) == "file:" or goodUrl:sub(1,7) == "mailto:" then
@@ -710,11 +741,41 @@ api.os = {}
 function api.os.clock()
 	return tonumber(string.format("%0.2f",math.floor(love.timer.getTime()*20)/20 - Computer.state.startTime))
 end
-function api.os.time()
-	return math.floor(((love.timer.getTime()-Computer.state.startTime)*0.02)%24*1000)/1000
+function api.os.time(sSource)
+    if sSource ~= nil and type( sSource ) ~= "string" then
+        error( "bad argument #1 (expected string, got " .. type( sSource ) .. ")", 2 ) 
+    end
+    if sSource == nil then
+        sSource = "ingame"
+    end
+    if sSource == "ingame" then
+	    return math.floor(((love.timer.getTime()-Computer.state.startTime)*0.02)%24*1000)/1000
+    elseif sSource == "local" then
+        local time = os.date("*t")
+        return time.hour + time.min / 60 + time.sec / 3600
+    elseif sSource == "utc" then
+        local time = os.date("!*t")
+        return time.hour + time.min / 60 + time.sec / 3600
+    else
+        error("Unsupported operation",2)
+    end
 end
-function api.os.day()
-	return math.floor((love.timer.getTime()-Computer.state.startTime)/1200)
+function api.os.day(sSource)
+    if sSource ~= nil and type( sSource ) ~= "string" then
+        error( "bad argument #1 (expected string, got " .. type( sSource ) .. ")", 2 ) 
+    end
+    if sSource == nil then
+        sSource = "ingame"
+    end
+    if sSource == "ingame" then
+	    return math.floor((love.timer.getTime()-Computer.state.startTime)/1200)
+    elseif sSource == "local" then
+        return getOsDayReal("*t")
+    elseif sSource == "utc" then
+        return getOsDayReal("!*t")
+    else
+        error("Unsupported operation",2)
+    end
 end
 function api.os.setComputerLabel(label)
     if nTime ~= nil and type( label ) ~= "string" then
@@ -724,13 +785,13 @@ function api.os.setComputerLabel(label)
         print("Clear Computer Label")
         Computer.state.label = nil
         if _conf.save_label == true then
-            love.filesystem.remove("/label/"..tostring(_conf.computer_id)..".txt")
+            love.filesystem.remove("/label/"..tostring(_conf.id)..".txt")
         end
     else
         print('Set Computer Label to "'..label..'"')
         Computer.state.label = label:sub(1,32)
         if _conf.save_label == true then
-            love.filesystem.write("/label/"..tostring(_conf.computer_id)..".txt",tostring(label))
+            love.filesystem.write("/label/"..tostring(_conf.id)..".txt",tostring(label))
         end
     end
 end
@@ -787,6 +848,7 @@ function api.os.shutdown()
     love.event.quit(0)
 end
 function api.os.reboot()
+    print("Rebooting Computer")
 	Computer:stop(true) -- Reboots on next update/tick
 end
 function api.os.epoch()
@@ -940,7 +1002,9 @@ function api.fs.list(...)
 	if not vfs.exists(path) or not vfs.isDirectory(path) then
 		error("Not a directory",2)
 	end
-	return vfs.getDirectoryItems(path)
+    local tFilelist = vfs.getDirectoryItems(path)
+    table.sort(tFilelist)
+	return tFilelist
 end
 function api.fs.exists(...)
 	local path = ...
@@ -1362,7 +1426,8 @@ function api.math.randomseed(num)
 	num=((num==math.huge or num==1/0) and -1) or (num~=num and 0) or math.floor(num)
 	randseed=(ffi.cast("uint64_t",bit.bxor(math.floor(num/2^32)%2^16,5))*2^32)+tonumber(bit.tohex(bit.bxor(num%2^32,0xDEECE66D)),16)
 end
-function api.math.random(a,b)
+
+function getRandom(a,b)
 	if b==nil then
 		if a==nil then
 			local n=tonumber((rnext(26)*(2^27))+rnext(27))/2^53
@@ -1377,24 +1442,56 @@ function api.math.random(a,b)
 			return n*c
 		else
 			if type(a)~="number" then
-				error("bad argument #1: number expected, got "..type(a),2)
+				error("bad argument #1: number expected, got "..type(a),3)
 			elseif a<1 or a==math.huge or a~=a or a==1/0 then
-				error("bad argument #1: interval is empty",2)
+				error("bad argument #1: interval is empty",3)
 			end
 			return 1+rnextInt(math.floor(a))
 		end
 	else
 		if type(a)~="number" then
-			error("bad argument #1: number expected, got "..type(a),2)
+			error("bad argument #1: number expected, got "..type(a),3)
 		elseif type(b)~="number" then
-			error("bad argument #2: number expected, got "..type(b),2)
+			error("bad argument #2: number expected, got "..type(b),3)
 		elseif a==math.huge or a~=a or a==1/0 then
-			error("bad argument #1: interval is empty",2)
+			error("bad argument #1: interval is empty",3)
 		elseif b==math.huge or b~=b or b==1/0 or b<a then
-			error("bad argument #2: interval is empty",2)
+			error("bad argument #2: interval is empty",3)
 		end
 		return a+rnextInt(b+1-a)
 	end
+end
+
+local tUnrandom = {}
+function api.math.random(a,b)
+    if _conf.unrandomize == true then
+        if type(tUnrandom[tostring(a)..":"..tostring(b)]) ~= "number" then
+            tUnrandom[tostring(a)..":"..tostring(b)] = getRandom(a,b)
+        end
+        return tUnrandom[tostring(a)..":"..tostring(b)]
+    end
+    return getRandom(a,b)
+end
+
+api.pocket = {}
+function api.pocket.equipBack()
+    error( "Cannot find a valid upgrade" ,2 )
+end
+function api.pocket.unequipBack()
+    if api.peripheral.getType("back") == nil then
+        error( "Nothing to unequip", 2 )
+    else
+        api.cclite.peripheralDetach("back")
+    end
+end
+
+local nativeerror = error
+function api.error(text,pos)
+    if pos == nil then
+        pos = 1
+    end
+    print("[ERROR]"..text)
+    nativeerror(text,pos+1)
 end
 
 _tostring_DB[coroutine.create] = nil
@@ -1418,6 +1515,7 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		_VERSION="Lua 5.1",
         _CC_DEFAULT_SETTINGS = _conf.CC_DEFAULT_SETTINGS,
 		__inext = api.inext,
+        ---error = api.error,
 		tostring = api.tostring,
 		tonumber = api.tonumber,
 		unpack = unpack,
@@ -1432,7 +1530,7 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		type = type,
 		select = select,
 		assert = assert,
-		error = error,
+		error = api.error,
 		ipairs = ipairs,
 		pairs = pairs,
 		pcall = pcall,
@@ -1489,8 +1587,8 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		},
 		os = {
 			clock = api.os.clock,
-			getComputerID = function() return _conf.computer_id end,
-			computerID = function() return _conf.computer_id end,
+			getComputerID = function() return _conf.id end,
+			computerID = function() return _conf.id end,
 			setComputerLabel = api.os.setComputerLabel,
 			getComputerLabel = api.os.getComputerLabel,
 			computerLabel = api.os.getComputerLabel,
@@ -1543,6 +1641,12 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 			request = api.http.request,
 		}
 	end
+    if _conf.enableAPI_pocket then
+        api.env.pocket = {
+            equipBack = api.pocket.equipBack,
+            unequipBack = api.pocket.unequipBack,
+        }
+    end
 	if _conf.enableAPI_cclite then
 		api.env.cclite = {
 			peripheralAttach = api.cclite.peripheralAttach,
