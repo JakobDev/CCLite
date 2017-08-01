@@ -257,7 +257,8 @@ Computer = {
 		blink = false,
 		label = nil,
 		startTime = math.floor(love.timer.getTime()*20)/20,
-		peripherals = {}
+		peripherals = {},
+        pertype = {},
 	},
 	minecraft = {
 		time = 0,
@@ -374,7 +375,7 @@ function Computer:resume(...)
 end
 
 local function validCharacter(byte)
-	return byte >= 32 and byte <= 126
+	return byte <= 127
 end
 
 function parseArgs(params)
@@ -472,6 +473,10 @@ function love.load( args )
     if not love.filesystem.exists("label/") then
 		love.filesystem.createDirectory("label/")
 	end
+    
+    if not love.filesystem.exists("plugins/") then
+		love.filesystem.createDirectory("plugins/")
+	end
 
 	if not love.filesystem.exists("data/"..tostring(_conf.id).."/") then
 		love.filesystem.createDirectory("data/"..tostring(_conf.id).."/") -- Make the user data folder
@@ -479,7 +484,8 @@ function love.load( args )
 	
 	vfs.mount("/data/"..tostring(_conf.id),"/","hdd")
 	vfs.mount("/lua/rom","/rom","rom")
-	
+	vfs.mount("/programs","/rom/programs/cclite","rom")
+
 	love.keyboard.setKeyRepeat(true)
     
 	Computer:start()

@@ -64,7 +64,7 @@ Screen.COLOUR_CODE = {
 }
 
 local glyphs = ""
-for i = 32,126 do
+for i = 0,127 do
 	glyphs = glyphs .. string.char(i)
 end
 Screen.font = love.graphics.newImageFont("res/font.png",glyphs)
@@ -72,7 +72,7 @@ Screen.font:setFilter("nearest","nearest")
 love.graphics.setFont(Screen.font)
 love.graphics.setLineWidth(_conf.terminal_guiScale)
 
-for i = 32,126 do Screen.tOffset[string.char(i)] = math.ceil(3 - Screen.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
+for i = 0,127 do Screen.tOffset[string.char(i)] = math.ceil(3 - Screen.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
 
 local msgTime = love.timer.getTime() + 5
 for i = 1,10 do
@@ -165,7 +165,7 @@ function Screen:draw()
 				local text = self_textB[x + 1]
 				if not hidden[text] then
 					local sByte = string.byte(text)
-					if sByte < 32 or sByte > 126 then
+					if sByte > 127 then
 						text = "?"
 					end
 					setColor(self.COLOUR_CODE[self_textColourB[x + 1]])

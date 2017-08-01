@@ -4,7 +4,7 @@ local function baseobj(sType)
 	local myID = ID
 	ID = ID + 1
 	obj.type = sType
-	function obj.getMethods() return {"turnOn", "shutdown", "reboot", "getID", "isOn"} end
+	function obj.getMethods() return {"turnOn", "shutdown", "reboot", "getID", "isOn", "getLabel"} end
 	function obj.ccliteGetMethods() return {} end
 	function obj.call(sMethod)
 		if sMethod == "turnOn" then
@@ -14,6 +14,8 @@ local function baseobj(sType)
 			return myID
         elseif sMethod == "isOn" then
             return false
+        elseif sMethod == "getLabel" then
+            return nil
 		end
 	end
 	return obj

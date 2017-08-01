@@ -583,6 +583,7 @@ if _conf.enableAPI_cclite then
 			error("Peripheral already attached to " .. sSide,2)
 		end
 		Computer.state.peripherals[sSide] = peripheral.base[sType](sSide)
+        Computer.state.pertype[sSide] = sType
 		if Computer.state.peripherals[sSide] ~= nil then
 			local methods = Computer.state.peripherals[sSide].getMethods()
 			Computer.state.peripherals[sSide].cache = {}
@@ -641,7 +642,13 @@ if _conf.enableAPI_cclite then
         screenshot:encode('png', "/screenshots/"..name)
     end
     function api.cclite.getVersion()
-        return "2.2"
+        return "2.3"
+    end
+    function api.cclite.listPeripheral()
+        return peripheral.types
+    end
+    function api.cclite.getPeripheralType(sSide)
+        return Computer.state.pertype[sSide]
     end
     --[[
     function api.cclite.setScreenSize( w, h )
@@ -1485,6 +1492,7 @@ function api.pocket.unequipBack()
     end
 end
 
+--[[
 local nativeerror = error
 function api.error(text,pos)
     if pos == nil then
@@ -1493,6 +1501,7 @@ function api.error(text,pos)
     print("[ERROR]"..text)
     nativeerror(text,pos+1)
 end
+--]]
 
 _tostring_DB[coroutine.create] = nil
 _tostring_DB[string.gmatch] = "gmatch" -- what ...
@@ -1515,7 +1524,6 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		_VERSION="Lua 5.1",
         _CC_DEFAULT_SETTINGS = _conf.CC_DEFAULT_SETTINGS,
 		__inext = api.inext,
-        ---error = api.error,
 		tostring = api.tostring,
 		tonumber = api.tonumber,
 		unpack = unpack,
@@ -1530,7 +1538,7 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		type = type,
 		select = select,
 		assert = assert,
-		error = api.error,
+		error = error,
 		ipairs = ipairs,
 		pairs = pairs,
 		pcall = pcall,
@@ -1661,6 +1669,8 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
             getConfig = api.cclite.getConfig,
             screenshot = api.cclite.screenshot,
             getVersion = api.cclite.getVersion,
+            listPeripheral = api.cclite.listPeripheral,
+            getPeripheralType = api.cclite.getPeripheralType,
 		}
 	end
 	api.env.rs = api.env.redstone
