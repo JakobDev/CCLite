@@ -147,8 +147,8 @@ local function string_trim(s)
 end
 
 local function FileReadHandle(path)
-	if not vfs.exists(path) then
-		return nil
+	if not vfs.exists(path) or vfs.isDirectory(path) then
+		return nil, "/"..path..": No such file"
 	end
 	local contents = {}
 	for line in vfs.lines(path) do
@@ -199,9 +199,12 @@ local function FileBinaryReadHandle(path)
 			File:close()
 		end,
 		read = function()
-			if closed or File:eof() then return end
+			if closed or File:isEOF() then return end
 			return File:read(1):byte()
-		end
+        end,
+        readAll = function()
+			return File:read()
+		end,
 	}
 	return handle
 end
@@ -247,11 +250,16 @@ local function FileBinaryWriteHandle(path, append)
 		end,
 		write = function(data)
 			if closed then return end
-			if type(data) ~= "number" then return end
-			while data < 0 do
-				data = data + 256
-			end
-			File:write(string.char(data % 256))
+			if type(data) == "number" then
+			    while data < 0 do
+				    data = data + 256
+			    end
+			    File:write(string.char(data % 256))
+            elseif type(data) == "string" then
+                File:write(serialize(data))
+            else
+                error( "bad argument #1 (string or number expected, got "..type(data)..")",2)
+            end
 		end,
 		flush = function()
 			File:flush()
@@ -417,7 +425,7 @@ function api.term.blit(text,fg,bg)
 			if Computer.state.cursorX + i - 1 > _conf.terminal_width then
 				break
 			end
-			Screen.textB[Computer.state.cursorY][Computer.state.cursorX + i - 1] = char
+			Screen.textB[Computer.state.cursorY][Computer.state.cursorX + i - 1] = char:byte()
 			Screen.textColourB[Computer.state.cursorY][Computer.state.cursorX + i - 1] = 2^validateColor(fg:byte(i,i),0)
 			Screen.backgroundColourB[Computer.state.cursorY][Computer.state.cursorX + i - 1] = 2^validateColor(bg:byte(i,i),15)
 		end
@@ -472,7 +480,7 @@ function api.term.write(text)
 			if Computer.state.cursorX + i - 1 > _conf.terminal_width then
 				break
 			end
-			Screen.textB[Computer.state.cursorY][Computer.state.cursorX + i - 1] = char
+			Screen.textB[Computer.state.cursorY][Computer.state.cursorX + i - 1] = char:byte()
 			Screen.textColourB[Computer.state.cursorY][Computer.state.cursorX + i - 1] = Computer.state.fg
 			Screen.backgroundColourB[Computer.state.cursorY][Computer.state.cursorX + i - 1] = Computer.state.bg
 		end
@@ -642,13 +650,19 @@ if _conf.enableAPI_cclite then
         screenshot:encode('png', "/screenshots/"..name)
     end
     function api.cclite.getVersion()
-        return "2.3"
+        return "2.4"
     end
     function api.cclite.listPeripheral()
         return peripheral.types
     end
     function api.cclite.getPeripheralType(sSide)
         return Computer.state.pertype[sSide]
+    end
+    function api.cclite.getSaveDirectory()
+        return love.filesystem.getSaveDirectory()
+    end
+    function api.cclite.isFirstRun()
+        return firststart
     end
     --[[
     function api.cclite.setScreenSize( w, h )
@@ -680,11 +694,14 @@ if _conf.enableAPI_http then
 		end
 		local goodUrl = string_trim(sUrl)
 		if goodUrl:sub(1,4) == "ftp:" or goodUrl:sub(1,5) == "file:" or goodUrl:sub(1,7) == "mailto:" then
+            table.insert(Computer.eventQueue, {"http_check", sUrl,false,"URL not http"})
 			return false, "URL not http"
 		end
 		if goodUrl:sub(1,5) ~= "http:" and goodUrl:sub(1,6) ~= "https:" then
+            table.insert(Computer.eventQueue, {"http_check", sUrl,false,"URL malformed"})
 			return false, "URL malformed"
 		end
+        table.insert(Computer.eventQueue, {"http_check", sUrl,true,nil})
 		return true
 	end
 	function api.http.request(sUrl, sParams, tHeaders)
@@ -858,8 +875,22 @@ function api.os.reboot()
     print("Rebooting Computer")
 	Computer:stop(true) -- Reboots on next update/tick
 end
-function api.os.epoch()
-    return os.time()
+function api.os.epoch(sSource)
+    if sSource ~= nil and type( sSource ) ~= "string" then
+        error( "bad argument #1 (expected string, got " .. type( sSource ) .. ")", 2 ) 
+    end
+    if sSource == nil then
+        sSource = "ingame"
+    end
+    if sSource == "ingame" then
+	    return api.os.day("ingame") * 86400000 + (api.os.time("ingame") * 3600000)
+    elseif sSource == "local" then
+        return os.time()
+    elseif sSource == "utc" then
+        return os.time(os.date("!*t"))
+    else
+        error("Unsupported operation",2)
+    end
 end
 
 api.peripheral = {}
@@ -993,7 +1024,7 @@ function api.fs.open(...)
 	local fsfunc = fsmodes[mode]
 	if fsfunc == nil then error("Unsupported mode",2) end
 
-	if vfs.isDirectory(path) then return end
+	if api.fs.isDir(path) then return end
 
 	return fsfunc(path, mode == "a" or mode == "ab")
 end
@@ -1007,7 +1038,7 @@ function api.fs.list(...)
 	if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
 
 	if not vfs.exists(path) or not vfs.isDirectory(path) then
-		error("Not a directory",2)
+		error("/"..path..": Not a directory",2)
 	end
     local tFilelist = vfs.getDirectoryItems(path)
     table.sort(tFilelist)
@@ -1080,7 +1111,7 @@ function api.fs.getSize(...)
 	if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
 
 	if vfs.exists(path) ~= true then
-		error("No such file",2)
+		error("/"..path..": No such file",2)
 	end
 
 	if vfs.isDirectory(path) then
@@ -1195,8 +1226,11 @@ end
 
 function api.fs.copy(...)
 	local fromPath, toPath = ...
-	if type(fromPath) ~= "string" or type(toPath) ~= "string" or select("#",...) ~= 2 then
-		error("Expected string, string",2)
+	if type(fromPath) ~= "string" then
+		error("bad argument #1 (expected string, got ".. type( fromPath ) .. ")",2)
+	end
+    if type(toPath) ~= "string" then
+		error("bad argument #2 (expected string, got ".. type( toPath ) .. ")",2)
 	end
 
 	fromPath = cleanPath(fromPath)
@@ -1207,9 +1241,9 @@ function api.fs.copy(...)
 	if toPath == "rom" or toPath:sub(1, 4) == "rom/" then
 		error("Access denied",2)
 	elseif not vfs.exists(fromPath) then
-		error("No such file",2)
+		error("/"..fromPath..": No such file",2)
 	elseif vfs.exists(toPath) then
-		error("File exists",2)
+		error("/"..toPath..": File exists",2)
 	elseif contains(fromPath, toPath) then
 		error("Can't copy a directory inside itself",2)
 	end
@@ -1226,7 +1260,7 @@ function api.fs.delete(...)
 	if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
 
 	if path == "rom" or path:sub(1, 4) == "rom/" or vfs.isMountPath(path) then
-		error("Access Denied",2)
+		error("/"..path..": Access Denied",2)
 	end
 	deltree(path)
 end
@@ -1548,7 +1582,6 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		string = tablecopy(string),
 		table = tablecopy(table),
 		coroutine = tablecopy(coroutine),
-
 		-- CC apis (BIOS completes api.)
 		term = {
 			blit = api.term.blit,
@@ -1671,11 +1704,22 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
             getVersion = api.cclite.getVersion,
             listPeripheral = api.cclite.listPeripheral,
             getPeripheralType = api.cclite.getPeripheralType,
+            getSaveDirectory = api.cclite.getSaveDirectory,
+            isFirstRun = api.cclite.isFirstRun,
 		}
 	end
+    if _conf.enableAPI_love then
+        api.env.love = love
+    end
 	api.env.rs = api.env.redstone
 	api.env.math.mod = nil
 	api.env.string.gfind = nil
 	api.env._G = api.env
+    --Only for boot.lua
+    api.env.boot = {
+        getBios = function() return love.filesystem.read(_conf.biosPath) end,
+        log = print,
+        biosPath = function() return _conf.biosPath end,
+    }
 end
 api.init()

@@ -44,6 +44,15 @@ function vfs.isMountPath(path)
 	end
 	return false
 end
+function vfs.isMountDir(path)
+    path = vfs.normalize(path)
+	for i = 1,#mountTable do
+		if mountTable[i][2] == path then
+			return mountTable[i][5]
+		end
+	end
+	return true
+end
 local quickPatch = {"append","createDirectory","isFile","lines","load","newFile","read","write"}
 for i = 1,#quickPatch do
 	vfs[quickPatch[i]] = function(path,...)
@@ -95,14 +104,17 @@ function vfs.getSize(filename)
 end
 vfs.init = function() end -- love.filesystem.init -- Don't call this, EVER
 function vfs.isDirectory(filename)
+    if vfs.isMountDir(filename) == false then
+        return false
+    end
 	return vfs.isMountPath(filename) or love.filesystem.isDirectory(vfs.fake2real(filename))
 end
 vfs.fsmount = love.filesystem.mount
-function vfs.mount(realPath,fakePath,virtualSide) -- Not the same as love.filesystem.mount
+function vfs.mount(realPath,fakePath,virtualSide,isDir) -- Not the same as love.filesystem.mount
 	if vfs.isMountPath(fakePath) then
 		return false
 	end
-	table.insert(mountTable,{vfs.normalize(realPath),fakePath,os.time(),virtualSide}) -- TODO: os.time() doesn't guarentee unix epoch time.
+	table.insert(mountTable,{vfs.normalize(realPath),fakePath,os.time(),virtualSide,isDir}) -- TODO: os.time() doesn't guarentee unix epoch time.
 	return true
 end
 function vfs.newFileData(contents,name,decoder)

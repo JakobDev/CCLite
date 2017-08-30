@@ -1,0 +1,11 @@
+Functions in the cclite API:
+cclite.peripheralAttach(sSide, sType)
+cclite.peripheralDetach(sSide)
+cclite.getMethods(sSide)
+cclite.call(sSide, sMethod, ...)
+cclite.message(sMessage)
+cclite.setTitle(text)
+cclite.getTitle()
+cclite.getConfig()
+cclite.screenshot()
+cclite.getVersion()

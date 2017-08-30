@@ -1,65 +1,7 @@
 local messageCache = {}
 
 -- TODO: Eventually switch to a dynamic config system
-local defaultConf = [[_conf = {
-	-- Enable the "http" API on Computers
-	enableAPI_http = true,
-	
-	-- Enable the "cclite" API on Computers
-	enableAPI_cclite = true,
-	
-    -- Enable the "pocket" API on Computers
-    enableAPI_pocket = false,
-
-	-- The height of Computer screens, in characters
-	terminal_height = 19,
-	
-	-- The width of Computer screens, in characters
-	terminal_width = 51,
-	
-	-- The GUI scale of Computer screens
-	terminal_guiScale = 2,
-	
-	-- Enable display of emulator FPS
-	cclite_showFPS = false,
-	
-	-- The FPS to lock CCLite to
-	lockfps = 20,
-	
-	-- Enable https connections through luasec
-	useLuaSec = false,
-	
-	-- Enable usage of Carrage Return for fs.writeLine
-	useCRLF = false,
-	
-	-- Enable onscreen controls
-	mobileMode = false,
-	
-    --The ID of the Computer
-    id = 0,
-    
-    --Choose if the Computer is a Advanced Computer
-    advanced = true,
-    
-    --Choose if the label shoulb be saved
-    save_label = true,
-    
-    --Unrandomize
-    unrandomize = false,
-    
-    --Set the default settings of CraftOS
-    CC_DEFAULT_SETTINGS="",
-    
-	--Mappings for controlpad
-	ctrlPad = {
-		top = "w",
-		bottom = "s",
-		left = "a",
-		right = "d",
-		center = "return"
-	}
-}
-]]
+local defaultConf = love.filesystem.read("/defaultconf.lua")
 
 -- Load default configuration
 loadstring(defaultConf,"@config")()
@@ -117,14 +59,17 @@ end
 function init()
 love.window.setTitle("CCLite")
 love.window.setIcon(love.image.newImageData("res/icon.png"))
+if love.system.getOS() == "Android" then
+end
+--love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2) + 200, (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2) + 100, {vsync = false})
 love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), {vsync = false})
 
 if _conf.enableAPI_http then require("http.HttpRequest") end
 bit = require("bit")
+utf8 = require("utf8")
 require("render")
 require("api")
 require("vfs")
-require("error")
 
 -- Test if HTTPS is working
 if _conf.useLuaSec then
@@ -220,7 +165,9 @@ keys = {
 	["ralt"] = 184,
 	["lalt"] = 56,
 }
+
 end
+
 -- Patch love.keyboard.isDown to make ctrl checking easier
 local olkiD = love.keyboard.isDown
 function love.keyboard.isDown(...)
@@ -292,17 +239,17 @@ function Computer:start()
     if love.filesystem.exists("/label/"..tostring(_conf.id)..".txt") and _conf.save_label == true then
         api.os.setComputerLabel(love.filesystem.read("/label/"..tostring(_conf.id)..".txt"):gsub("\n",""))
     end
+
     print("Starting CraftOS")
-	local fn, err = loadstring(love.filesystem.read("/lua/bios.lua"),"@bios")
+	local fn, err = loadstring(love.filesystem.read("/boot.lua"),"@boot.lua")
     
 	if not fn then
 		print(err)
-        errorscreen(err)
 		return
 	end
 
 	setfenv(fn, api.env)
-
+    
 	self.proc = coroutine.create(fn)
 	self.running = true
 	local ok, filter = self:resume({})
@@ -413,13 +360,15 @@ function toboolean(value)
 end
 
 function love.load( args )
-    local args,ops = parseArgs(args)
+    firststart = false
+    local argst,ops = parseArgs(args)
     for k,v in pairs(ops) do
         _conf[k] = v
     end
 	_conf.enableAPI_http = toboolean(_conf.enableAPI_http)
 	_conf.enableAPI_cclite = toboolean(_conf.enableAPI_cclite)
     _conf.enableAPI_pocket = toboolean(_conf.enableAPI_pocket)
+    _conf.enableAPI_love = toboolean(_conf.enableAPI_love)
 	_conf.terminal_height = tonumber(_conf.terminal_height)
 	_conf.terminal_width = tonumber(_conf.terminal_width)
 	_conf.terminal_guiScale = tonumber(_conf.terminal_guiScale)
@@ -432,6 +381,8 @@ function love.load( args )
     _conf.advanced = toboolean(_conf.advanced)
     _conf.save_label = toboolean(_conf.save_label)
     _conf.unrandomize = toboolean(_conf.unrandomize)
+    _conf.mount_programs = toboolean(_conf.mount_programs)
+    _conf.freeSpace = tonumber(_conf.freeSpace)
 
     --For Commandline User
     if _conf.pocket == true then
@@ -463,6 +414,7 @@ function love.load( args )
 	ChatAllowedCharacters[96] = nil
 
 	if not love.filesystem.exists("data/") then
+        firststart = true
 		love.filesystem.createDirectory("data/")
 	end
     
@@ -473,21 +425,24 @@ function love.load( args )
     if not love.filesystem.exists("label/") then
 		love.filesystem.createDirectory("label/")
 	end
-    
-    if not love.filesystem.exists("plugins/") then
-		love.filesystem.createDirectory("plugins/")
-	end
 
 	if not love.filesystem.exists("data/"..tostring(_conf.id).."/") then
 		love.filesystem.createDirectory("data/"..tostring(_conf.id).."/") -- Make the user data folder
 	end
 	
-	vfs.mount("/data/"..tostring(_conf.id),"/","hdd")
-	vfs.mount("/lua/rom","/rom","rom")
-	vfs.mount("/programs","/rom/programs/cclite","rom")
+	vfs.mount("/data/"..tostring(_conf.id),"/","hdd",true)
+	vfs.mount(_conf.romPath,"/rom","rom",true)
+
+    if _conf.mount_programs == true then
+	    vfs.mount("/programs","/rom/programs/cclite","rom",true)
+    end
+    
+    
+    vfs.mount("/startup.lua","/rom/autorun/cclite.lua","rom",false)
+    vfs.mount("/help/cclite.txt","/rom/help/cclite.txt","rom",false)
 
 	love.keyboard.setKeyRepeat(true)
-    
+
 	Computer:start()
 end
 
@@ -495,19 +450,17 @@ function love.mousereleased(x, y, button)
 	local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
 	local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
 
-	if Computer.mouse.isPressed and (button == "l" or button == "m" or button == "r") and _conf.advanced == true then
+	if Computer.mouse.isPressed and (button == 1 or button == 2 or button == 3) and _conf.advanced == true then
 		Computer.mouse.lastTermX = termMouseX
 		Computer.mouse.lastTermY = termMouseY
-		if button == "l" then button = 1
-		elseif button == "m" then button = 3
-		elseif button == "r" then button = 2
-		end
 		table.insert(Computer.eventQueue, {"mouse_up", button, termMouseX, termMouseY})
 	end
 	Computer.mouse.isPressed = false
 end
 
 function love.mousepressed(x, y, button)
+    GlobalMouseX = x
+    GlobalMouseY = y
 	if x > 0 and x < Screen.sWidth and y > 0 and y < Screen.sHeight then -- Within screen bounds.
         if _conf.advanced == true then
             local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
@@ -529,11 +482,36 @@ end
 function love.wheelmoved(x, y)
     if _conf.advanced == true then
         if y > 0 then
-        table.insert(Computer.eventQueue, {"mouse_scroll", -1, termMouseX, termMouseY}) 
+            table.insert(Computer.eventQueue, {"mouse_scroll", -1, termMouseX, termMouseY}) 
         elseif y < 0 then
             table.insert(Computer.eventQueue, {"mouse_scroll", 1, termMouseX, termMouseY})
         end
     end
+end
+
+--[[
+function love.touchreleased(id,x,y)
+    local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
+	local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
+    Computer.mouse.lastTermX = termMouseX
+    Computer.mouse.lastTermY = termMouseY
+    table.insert(Computer.eventQueue, {"mouse_up", 1, termMouseX, termMouseY})
+    Computer.mouse.isPressed = false
+end
+--]]
+
+function love.touchmoved(id,x,y)
+    if x ~= GlobalMouseX or y ~= GlobalMouseY then
+        if x > 0 and x > Screen.sWidth and y > 0 and y > Screen.sHeight then --Out of Border
+            if y > GlobalMouseY then
+                table.insert(Computer.eventQueue, {"mouse_scroll",1})
+            elseif y < GlobalMouseY then
+                table.insert(Computer.eventQueue, {"mouse_scroll",-1})
+            end
+        end
+    end
+    GlobalMouseX = x
+    GlobalMouseY = y
 end
 
 function love.textinput(unicode)
@@ -603,6 +581,7 @@ function love.keypressed(key)
 		-- Hack to get around android bug
 		if love.system.getOS() == "Android" and #key == 1 and validCharacter(key:byte()) then
 			table.insert(Computer.eventQueue, {"char", key})
+            table.insert(Computer.eventQueue, {"key_up", keys[key]})
 		end
 	end
 end
@@ -792,6 +771,8 @@ function Computer:update()
 			    table.insert (self.eventQueue, {"mouse_drag", love.mouse.isDown(2) and 2 or 1, termMouseX, termMouseY})
             end
 		end
+        GlobalMouseX = mouseX
+        GlobalMouseY = mouseY
 	end
 
 	while #self.eventQueue > 256 do
@@ -819,7 +800,7 @@ function love.run()
 
 	-- Main loop time.
 	while true do
-		-- Process events.
+		-- Process events.            
 		if love.event then
 			love.event.pump()
 			for e,a,b,c,d in love.event.poll() do
