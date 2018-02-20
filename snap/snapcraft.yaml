@@ -1,0 +1,68 @@
+name: cclite
+version: "2.4"
+summary: A ComputerCraft Emulator
+description: |
+  A ComputerCraft Emulator.
+
+confinement: strict
+grade: stable
+
+apps:
+  cclite:
+    command: bin/launch_cclite
+    plugs:
+      - pulseaudio
+      - x11
+      - network
+      - network-bind
+      - opengl
+
+parts:
+  love0.10.2:
+    plugin: dump
+    source: https://bitbucket.org/rude/love/downloads/love_0.10.2ppa1_amd64.deb
+  liblove0.10.2:
+    plugin: dump
+    source: https://bitbucket.org/rude/love/downloads/liblove0_0.10.2ppa1_amd64.deb
+#  love0.10.1:
+#    plugin: dump
+#    source: https://bitbucket.org/rude/love/downloads/love_0.10.1ppa1_amd64.deb
+#  liblove0.10.1:
+#    plugin: dump
+#    source: https://bitbucket.org/rude/love/downloads/liblove0_0.10.1ppa1_amd64.deb
+#  love0.10.0:
+#    plugin: dump
+#    source: https://bitbucket.org/rude/love/downloads/love_0.10.0ppa1_amd64.deb
+#  liblove0.10.0:
+#    plugin: dump
+#    source: https://bitbucket.org/rude/love/downloads/liblove0_0.10.0ppa1_amd64.deb
+#  love0.9.1:
+#    plugin: dump
+#    source: https://bitbucket.org/rude/love/downloads/love_0.9.1_amd64.deb
+#  liblove0.9.1:
+#    plugin: dump
+#    source: https://bitbucket.org/rude/love/downloads/liblove_0.9.1_amd64.deb
+  cclite:
+    plugin: dump
+    source: ./cclite/
+    stage-packages:
+      - libgl1-mesa-dri
+      - libgl1-mesa-glx
+      - libglew1.13
+      - lua-socket
+      - libluajit-5.1-2
+      - libsdl2-2.0-0
+      - libopenal1
+      - libilmbase12
+      - libdevil1c2
+      - libogg0
+      - libmpg123-0
+      - libtheora0
+      - libvorbisfile3
+      - libmodplug1
+      - libphysfs1
+  launcher:
+    plugin: dump
+    source: ./launcher
+    organize:
+      'launch_cclite': 'bin/launch_cclite'

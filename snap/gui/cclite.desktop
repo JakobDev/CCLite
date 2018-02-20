@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=CCLite
+Comment=A ComputerCraft Emulator
+Exec=cclite
+Icon=${SNAP}/meta/gui/cclite.png
+Terminal=false
+Type=Application
+Categories=Game
+Keywords=game;computercraft;lua
