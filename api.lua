@@ -71,6 +71,9 @@ if _conf.enableAPI_http then
 				if closed then return end
 				local str = contents[lineIndex]
 				lineIndex = lineIndex + 1
+                if lineIndex > #contents then
+                    closed = true
+                end
 				return str
 			end,
 			readAll = function()
@@ -88,6 +91,29 @@ if _conf.enableAPI_http then
 					return table.concat(tData, '\n')
 				end
 			end,
+            read = function(nBytes)
+                if closed then return end
+                if nBytes ~= nil and type(nBytes) ~= "number" then
+                    error( "bad argument #1 (expected number, got " .. type( nBytes ) .. ")", 2 )
+                end
+                nBytes = nBytes or 1
+                local sReturn = ""
+                for i=1,nBytes do
+                    if contents[lineIndex] == "" then
+                        lineIndex = lineIndex + 1
+                        if lineIndex > #contents then
+                            closed = true
+                            break
+                        else
+                            sReturn = sReturn.."\n"
+                        end
+                    else
+                        sReturn = sReturn..contents[lineIndex]:sub(1,1)
+                        contents[lineIndex] = contents[lineIndex]:sub(2)
+                    end
+                end
+                return sReturn
+            end,
 			getResponseCode = function()
 				return status
 			end
@@ -165,6 +191,9 @@ local function FileReadHandle(path)
 			if closed then return end
 			local str = contents[lineIndex]
 			lineIndex = lineIndex + 1
+            if lineIndex > #contents then
+                close = true
+            end
 			return str
 		end,
 		readAll = function()
@@ -181,7 +210,30 @@ local function FileReadHandle(path)
 				end
 				return table.concat(tData, '\n')
 			end
-		end
+		end,
+        read = function(nBytes)
+            if closed then return end
+            if nBytes ~= nil and type(nBytes) ~= "number" then
+                error( "bad argument #1 (expected number, got " .. type( nBytes ) .. ")", 2 )
+            end
+            nBytes = nBytes or 1
+            local sReturn = ""
+            for i=1,nBytes do
+                if contents[lineIndex] == "" then
+                    lineIndex = lineIndex + 1
+                    if lineIndex > #contents then
+                        closed = true
+                        break
+                    else
+                        sReturn = sReturn.."\n"
+                    end
+                else
+                    sReturn = sReturn..contents[lineIndex]:sub(1,1)
+                    contents[lineIndex] = contents[lineIndex]:sub(2)
+                end
+            end
+            return sReturn
+        end
 	}
 	return handle
 end
@@ -198,9 +250,15 @@ local function FileBinaryReadHandle(path)
 			closed = true
 			File:close()
 		end,
-		read = function()
+		read = function(nBytes)
 			if closed or File:isEOF() then return end
-			return File:read(1):byte()
+            if nBytes == nil then
+			    return File:read(1):byte()
+            elseif type(nBytes) == "number" then
+                return File:read(nBytes)
+            else
+                error( "bad argument #1 (expected number, got " .. type( nBytes ) .. ")", 2 )
+            end
         end,
         readAll = function()
 			return File:read()
@@ -650,7 +708,7 @@ if _conf.enableAPI_cclite then
         screenshot:encode('png', "/screenshots/"..name)
     end
     function api.cclite.getVersion()
-        return "2.4"
+        return Version
     end
     function api.cclite.listPeripheral()
         return peripheral.types
@@ -1561,7 +1619,7 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		tostring = api.tostring,
 		tonumber = api.tonumber,
 		unpack = unpack,
-		getfenv = api.getfenv,
+		getfenv = getfenv,--api.getfenv,
 		setfenv = setfenv,
 		rawequal = rawequal,
 		rawset = rawset,

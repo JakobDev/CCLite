@@ -23,8 +23,11 @@ local g_defaultOutput = {
 	bClosed = false,
 	close = function( self )
 	end,
-	write = function( self, _sText )
-		_G.write( _sText )
+	write = function( self, ... )
+        local nLimit = select("#", ... )
+        for n = 1, nLimit do
+            _G.write( select( n, ... ) )
+        end
 	end,
 	flush = function( self )
 	end,
@@ -54,7 +57,7 @@ function input( _arg )
 end
 
 function lines( _sFileName )
-    if _G.type( _sFileNamel ) ~= "string" then
+    if _G.type( _sFileName ) ~= "string" then
         error( "bad argument #1 (expected string, got " .. _G.type( _sFileName ) .. ")", 2 )
     end
 	if _sFileName then
@@ -68,7 +71,7 @@ function open( _sPath, _sMode )
     if _G.type( _sPath ) ~= "string" then
         error( "bad argument #1 (expected string, got " .. _G.type( _sPath ) .. ")", 2 )
     end
-    if _G.type( _sMode ) ~= "string" then
+    if _sMode ~= nil and _G.type( _sMode ) ~= "string" then
         error( "bad argument #2 (expected string, got " .. _G.type( _sMode ) .. ")", 2 )
     end
 	local sMode = _sMode or "r"
@@ -91,8 +94,10 @@ function open( _sPath, _sMode )
 					return file.readLine()
 				elseif sFormat == "*a" then
 					return file.readAll()
+                elseif _G.type( sFormat ) == "number" then
+                    return file.read( sFormat )
 				else
-					error( "Unsupported format" )
+					error( "Unsupported format", 2 )
 				end
 				return nil
 			end,
@@ -115,8 +120,11 @@ function open( _sPath, _sMode )
 				file.close()
 				self.bClosed = true
 			end,
-			write = function( self, _sText )
-				file.write( _sText )
+			write = function( self, ... )
+                local nLimit = select("#", ... )
+                for n = 1, nLimit do
+				    file.write( select( n, ... ) )
+                end
 			end,
 			flush = function( self )
 				file.flush()
@@ -144,8 +152,11 @@ function open( _sPath, _sMode )
 				file.close()
 				self.bClosed = true
 			end,
-			write = function( self, _number )
-				file.write( _number )
+			write = function( self, ... )
+                local nLimit = select("#", ... )
+                for n = 1, nLimit do
+				    file.write( select( n, ... ) )
+                end
 			end,
 			flush = function( self )
 				file.flush()
@@ -154,7 +165,7 @@ function open( _sPath, _sMode )
 	
 	else
 		file.close()
-		error( "Unsupported mode" )
+		error( "Unsupported mode", 2 )
 		
 	end
 end

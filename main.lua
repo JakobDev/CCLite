@@ -1,5 +1,9 @@
 local messageCache = {}
 
+Version = "2.6"
+
+print("CCLite "..Version)
+
 -- TODO: Eventually switch to a dynamic config system
 local defaultConf = love.filesystem.read("/defaultconf.lua")
 
@@ -59,8 +63,6 @@ end
 function init()
 love.window.setTitle("CCLite")
 love.window.setIcon(love.image.newImageData("res/icon.png"))
-if love.system.getOS() == "Android" then
-end
 --love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2) + 200, (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2) + 100, {vsync = false})
 love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), {vsync = false})
 
@@ -71,24 +73,16 @@ require("render")
 require("api")
 require("vfs")
 
+if love.system.getOS() ~= "Android" then
+    _conf.useLuaSec = true
+end
+
 -- Test if HTTPS is working
-if _conf.useLuaSec then
-	local stat, err = pcall(function()
-		local trash = require("ssl.https")
-	end)
-	if stat ~= true then
-		_conf.useLuaSec = false
-		Screen:message("Could not load HTTPS support")
-		if err:find("module 'ssl.core' not found") then
-			print("CCLite cannot find ssl.dll or ssl.so\n\n" .. err)
-		elseif err:find("The specified procedure could not be found") then
-			print("CCLite cannot find ssl.lua\n\n" .. err)
-		elseif err:find("module 'ssl.https' not found") then
-			print("CCLite cannot find ssl/https.lua\n\n" .. err)
-		else
-			print(err)
-		end
-	end
+local stat, err = pcall(require,"ssl.https")
+if stat ~= true then
+	_conf.useLuaSec = false
+	Screen:message("Could not load HTTPS support. You need to install luasec.")
+    print("Could not load HTTPS support. You need to install luasec.")
 end
 
 -- Load virtual peripherals
@@ -481,6 +475,8 @@ end
 
 function love.wheelmoved(x, y)
     if _conf.advanced == true then
+        local termMouseX = math_bind(math.floor((love.mouse.getX() - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
+	    local termMouseY = math_bind(math.floor((love.mouse.getY() - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
         if y > 0 then
             table.insert(Computer.eventQueue, {"mouse_scroll", -1, termMouseX, termMouseY}) 
         elseif y < 0 then
@@ -532,7 +528,7 @@ function love.keypressed(key)
     if love.keyboard.isDown("escape") then
         api.cclite.screenshot()
     end
-    if key == "menu" then
+    if key == "escape" and love.system.getOS() == "Android" then
         love.keyboard.setTextInput(true)
     end
 	if love.keyboard.isDown("ctrl") then
@@ -626,8 +622,14 @@ if api.fs.exists("/"..sName) == true then
     end
 end
 file:open("r")
-love.filesystem.write("data/"..tostring(_conf.id).."/"..sName,file:read())
+local sContent = file:read()
 file:close()
+if sContent == nil then
+    print("Could not read dropped file")
+    Screen:message("Could not read dropped file")
+    return
+end
+love.filesystem.write("data/"..tostring(_conf.id).."/"..sName,file:read())
 print("Dropped "..sName)
 table.insert(messageCache, "Dropped "..sName)
 end

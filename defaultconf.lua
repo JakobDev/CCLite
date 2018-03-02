@@ -26,9 +26,6 @@ _conf = {
 	-- The FPS to lock CCLite to
 	lockfps = 20,
 	
-	-- Enable https connections through luasec
-	useLuaSec = false,
-	
 	-- Enable usage of Carrage Return for fs.writeLine
 	useCRLF = false,
 	

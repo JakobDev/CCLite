@@ -81,7 +81,6 @@ cou = 0
 for k,v in pairs(Screen.tOffset) do
     cou = cou + 1
 end
-print(cou)
 local msgTime = love.timer.getTime() + 5
 for i = 1,10 do
 	Screen.messages[i] = {"",msgTime,false}
