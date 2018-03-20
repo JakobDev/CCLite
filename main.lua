@@ -1,6 +1,6 @@
 local messageCache = {}
 
-Version = "2.6"
+Version = "3.0"
 
 print("CCLite "..Version)
 
@@ -61,10 +61,12 @@ else
 end
 
 function init()
+startScale = _conf.terminal_guiScale
 love.window.setTitle("CCLite")
 love.window.setIcon(love.image.newImageData("res/icon.png"))
---love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2) + 200, (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2) + 100, {vsync = false})
-love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), {vsync = false})
+WindowWidth = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
+WindowHight = (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
+love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), {vsync = false,resizable=_conf.allow_resize})
 
 if _conf.enableAPI_http then require("http.HttpRequest") end
 bit = require("bit")
@@ -315,7 +317,7 @@ function Computer:resume(...)
 	return ok, err
 end
 
-local function validCharacter(byte)
+function validCharacter(byte)
 	return byte <= 127
 end
 
@@ -368,7 +370,6 @@ function love.load( args )
 	_conf.terminal_guiScale = tonumber(_conf.terminal_guiScale)
 	_conf.cclite_showFPS = toboolean(_conf.cclite_showFPS)
 	_conf.lockfps = tonumber(_conf.lockfps)
-	_conf.useLuaSec = toboolean(_conf.useLuaSec)
 	_conf.useCRLF = toboolean(_conf.useCRLF)
 	_conf.mobileMode = toboolean(_conf.mobileMode)
     _conf.id = tonumber(_conf.id)
@@ -510,6 +511,15 @@ function love.touchmoved(id,x,y)
     GlobalMouseY = y
 end
 
+tCovertChar = {}
+tCovertChar[132] = 196 --Ä
+tCovertChar[150] = 214 --Ö
+tCovertChar[156] = 220 --ü
+tCovertChar[159] = 223 --ß
+tCovertChar[164] = 228 --ä
+tCovertChar[182] = 246 --ö
+tCovertChar[188] = 252 --ü
+
 function love.textinput(unicode)
 	if not Computer.blockInput then
 		-- Hack to get around android bug
@@ -519,7 +529,8 @@ function love.textinput(unicode)
 		if validCharacter(unicode:byte()) then
 			table.insert(Computer.eventQueue, {"char", unicode})
         else
-            table.insert(Computer.eventQueue, {"char", "?"})
+            local nByte = string.byte(unicode,-1)
+            table.insert(Computer.eventQueue, {"char", string.char(tCovertChar[nByte] or nByte)})
 		end
 	end
 end
@@ -556,20 +567,19 @@ function love.keypressed(key)
 			cliptext = cliptext:sub(1, nloc - 1)
 		end
 		if cliptext ~= "" then
-            --[[
             local pastetext = ""
             for i = 1, #cliptext do
                  local c = cliptext:sub(i,i)
-                 if validCharacter(c:byte()) then
+                 local nByte = string.byte(c)
+                 if validCharacter(nByte) then
 			        pastetext = pastetext..c
+                 elseif nByte == 195 then
                  else
-                    print(c)
-                    pastetext = pastetext.."?"
+                    pastetext = pastetext..string.char(tCovertChar[nByte] or nByte)
                  end
             end
-            ]]--
             print("Paste "..cliptext)
-			table.insert(Computer.eventQueue, {"paste", cliptext})
+			table.insert(Computer.eventQueue, {"paste", pastetext})
 		end
 	elseif isrepeat and love.keyboard.isDown("ctrl") and (key == "t" or key == "s" or key == "r") then
 	elseif keys[key] then
@@ -601,6 +611,22 @@ love.focus = love.visible
 	monitor_touch
 	monitor_resize
 ]]
+
+function love.resize(x,y)
+    if y > WindowHight then
+        _conf.terminal_height = _conf.terminal_height + 1
+    elseif y < WindowHight then
+        _conf.terminal_height = _conf.terminal_height - 1
+    end
+    if x > WindowWidth then
+        _conf.terminal_width = _conf.terminal_width + 1
+    elseif x < WindowWidth then
+        _conf.terminal_width = _conf.terminal_width - 1
+    end
+    WindowHight = y
+    WindowWidth = x
+    api.cclite.setScreenSize(_conf.terminal_width,_conf.terminal_height)
+end
 
 function love.quit()
     --Delete Folder if empty

@@ -11,6 +11,8 @@ if type(cclite) == "table" then
             os.pullEvent("key")
         else
             shell.run(prog)
+            print("Press any key to continue")
+            os.pullEvent("key")
         end
         os.shutdown()
     elseif type(cclite.getConfig().run) == "string" then
@@ -20,7 +22,7 @@ if type(cclite) == "table" then
     if fs.isDir("/rom/programs/cclite") == true then
         shell.setPath(shell.path()..":/rom/programs/cclite")
         if cclite.isFirstRun() == true then
-            shell.run("/rom/programs/cclite/firstrun.lua")
+            shell.run("/rom/programs/cclite/welcome.lua")
         end
     end
     if fs.isDir("/rom/programs/extra") == true then

@@ -9,7 +9,7 @@ _conf = {
     enableAPI_pocket = false,
     
     -- Give the Computer Access to the full API of Löve2d (only for debuging)
-    enableAPI_love = true,
+    enableAPI_love = false,
 
 	-- The height of Computer screens, in characters
 	terminal_height = 19,
@@ -19,7 +19,7 @@ _conf = {
 	
 	-- The GUI scale of Computer screens
 	terminal_guiScale = 2,
-	
+
 	-- Enable display of emulator FPS
 	cclite_showFPS = false,
 	

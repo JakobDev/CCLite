@@ -66,7 +66,7 @@ Screen.COLOUR_CODE = {
 }
 
 local glyphs = ""
-for i = 0,155 do
+for i = 0,255 do
     --glyphs = glyphs .. string.char(i)
     glyphs = glyphs .. utf8.char(i)
 end
@@ -96,8 +96,8 @@ local lsetCol = love.graphics.setColor
 local ldrawRect = love.graphics.rectangle
 local lprint = love.graphics.print
 local tOffset = Screen.tOffset
-local decWidth = _conf.terminal_width - 1
-local decHeight = _conf.terminal_height - 1
+decWidth = _conf.terminal_width - 1
+decHeight = _conf.terminal_height - 1
 
 local lastColor = COLOUR_FULL_WHITE
 local function setColor(c)

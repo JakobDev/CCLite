@@ -722,13 +722,14 @@ if _conf.enableAPI_cclite then
     function api.cclite.isFirstRun()
         return firststart
     end
-    --[[
     function api.cclite.setScreenSize( w, h )
-        _conf.terminal_width = w
-        _conf.terminal_height = h
+        _conf.terminal_width = math.floor(w)
+        _conf.terminal_height = math.floor(h)
         Screen.sWidth = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
         Screen.sHeight = (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
-        love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), {vsync = false})
+        love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), {vsync = false,resizable=_conf.allow_resize})
+        decWidth = _conf.terminal_width - 1
+        decHeight = _conf.terminal_height - 1
         for y = 1, _conf.terminal_height do
 	        Screen.textB[y] = {}
 	        Screen.backgroundColourB[y] = {}
@@ -739,8 +740,9 @@ if _conf.enableAPI_cclite then
 		        Screen.textColourB[y][x] = 1
 	        end
         end
+        table.insert(Computer.eventQueue, {"term_resize"})
+        print("Resize Window to ".._conf.terminal_width.." and ".._conf.terminal_height)
     end
-    ]]--
 end
 
 if _conf.enableAPI_http then
@@ -1764,6 +1766,7 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
             getPeripheralType = api.cclite.getPeripheralType,
             getSaveDirectory = api.cclite.getSaveDirectory,
             isFirstRun = api.cclite.isFirstRun,
+            setScreenSize = api.cclite.setScreenSize,
 		}
 	end
     if _conf.enableAPI_love then
