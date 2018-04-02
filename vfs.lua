@@ -64,7 +64,7 @@ for i = 1,#copyOver do
 	vfs[copyOver[i]] = love.filesystem[copyOver[i]]
 end
 function vfs.exists(filename)
-	return vfs.isMountPath(filename) or love.filesystem.exists(vfs.fake2real(filename))
+	return vfs.isMountPath(filename) or wrapper.exists(vfs.fake2real(filename))
 end
 function vfs.getDirectoryItems(dir)
 	dir = vfs.normalize(dir)
@@ -100,21 +100,21 @@ end
 function vfs.getSize(filename)
 	-- TODO: This most likely should report an error if the path is a mount path
 	-- But Love2D crashes on directories so I can't get an example.
-	return love.filesystem.getSize(vfs.fake2real(filename))
+	return wrapper.getSize(vfs.fake2real(filename))
 end
 vfs.init = function() end -- love.filesystem.init -- Don't call this, EVER
 function vfs.isDirectory(filename)
     if vfs.isMountDir(filename) == false then
         return false
     end
-	return vfs.isMountPath(filename) or love.filesystem.isDirectory(vfs.fake2real(filename))
+	return vfs.isMountPath(filename) or wrapper.isDirectory(vfs.fake2real(filename))
 end
 vfs.fsmount = love.filesystem.mount
 function vfs.mount(realPath,fakePath,virtualSide,isDir) -- Not the same as love.filesystem.mount
 	if vfs.isMountPath(fakePath) then
 		return false
 	end
-	table.insert(mountTable,{vfs.normalize(realPath),fakePath,os.time(),virtualSide,isDir}) -- TODO: os.time() doesn't guarentee unix epoch time.
+	table.insert(mountTable,{vfs.normalize(realPath),fakePath,api.os.epoch("utc"),virtualSide,isDir})
 	return true
 end
 function vfs.newFileData(contents,name,decoder)

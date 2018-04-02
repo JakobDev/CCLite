@@ -1,8 +1,10 @@
 local messageCache = {}
 
-Version = "3.0"
+Version = "4.0"
 
 print("CCLite "..Version)
+--Wrapper must required before all the other ones
+require("wrapper")
 
 -- TODO: Eventually switch to a dynamic config system
 local defaultConf = love.filesystem.read("/defaultconf.lua")
@@ -53,7 +55,7 @@ function validateConfig(cfgData,setup)
 	end
 end
 
-if love.filesystem.exists("/CCLite.cfg") then
+if wrapper.exists("/CCLite.cfg") then
 	local cfgData = love.filesystem.read("/CCLite.cfg")
 	validateConfig(cfgData)
 else
@@ -61,11 +63,8 @@ else
 end
 
 function init()
-startScale = _conf.terminal_guiScale
 love.window.setTitle("CCLite")
 love.window.setIcon(love.image.newImageData("res/icon.png"))
-WindowWidth = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
-WindowHight = (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
 love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), {vsync = false,resizable=_conf.allow_resize})
 
 if _conf.enableAPI_http then require("http.HttpRequest") end
@@ -212,6 +211,7 @@ Computer = {
 	},
 	lastFPS = love.timer.getTime(),
 	FPS = love.timer.getFPS(),
+    disks = {},
 }
 
 function Computer:start()
@@ -232,7 +232,7 @@ function Computer:start()
 	Computer.state.fg = 1
 	Computer.state.blink = false
 	Computer.state.startTime = math.floor(love.timer.getTime()*20)/20
-    if love.filesystem.exists("/label/"..tostring(_conf.id)..".txt") and _conf.save_label == true then
+    if wrapper.exists("/label/"..tostring(_conf.id)..".txt") and _conf.save_label == true then
         api.os.setComputerLabel(love.filesystem.read("/label/"..tostring(_conf.id)..".txt"):gsub("\n",""))
     end
 
@@ -408,20 +408,20 @@ function love.load( args )
 	end
 	ChatAllowedCharacters[96] = nil
 
-	if not love.filesystem.exists("data/") then
+	if not wrapper.exists("data/") then
         firststart = true
 		love.filesystem.createDirectory("data/")
 	end
     
-    if not love.filesystem.exists("screenshots/") then
+    if not wrapper.exists("screenshots/") then
 		love.filesystem.createDirectory("screenshots/")
 	end
     
-    if not love.filesystem.exists("label/") then
+    if not wrapper.exists("label/") then
 		love.filesystem.createDirectory("label/")
 	end
 
-	if not love.filesystem.exists("data/"..tostring(_conf.id).."/") then
+	if not wrapper.exists("data/"..tostring(_conf.id).."/") then
 		love.filesystem.createDirectory("data/"..tostring(_conf.id).."/") -- Make the user data folder
 	end
 	
@@ -613,19 +613,7 @@ love.focus = love.visible
 ]]
 
 function love.resize(x,y)
-    if y > WindowHight then
-        _conf.terminal_height = _conf.terminal_height + 1
-    elseif y < WindowHight then
-        _conf.terminal_height = _conf.terminal_height - 1
-    end
-    if x > WindowWidth then
-        _conf.terminal_width = _conf.terminal_width + 1
-    elseif x < WindowWidth then
-        _conf.terminal_width = _conf.terminal_width - 1
-    end
-    WindowHight = y
-    WindowWidth = x
-    api.cclite.setScreenSize(_conf.terminal_width,_conf.terminal_height)
+    print(x / 6)
 end
 
 function love.quit()

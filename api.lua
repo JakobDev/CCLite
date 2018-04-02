@@ -572,10 +572,10 @@ function api.term.setBackgroundColor(...)
 	Computer.state.bg = num
 end
 function api.term.setPaletteColour(color,r,b,g)
-    Screen.COLOUR_CODE[color] = {r*255,b*255,g*255}
+    Screen.COLOUR_CODE[color] = {r,b,g}
 end
 function api.term.getPaletteColour(color)
-    return Screen.COLOUR_CODE[color][1]/255,Screen.COLOUR_CODE[color][2]/255,Screen.COLOUR_CODE[color][3]/255
+    return Screen.COLOUR_CODE[color][1],Screen.COLOUR_CODE[color][2],Screen.COLOUR_CODE[color][3]
 end
 function api.term.isColor()
 	return _conf.advanced
@@ -723,6 +723,12 @@ if _conf.enableAPI_cclite then
         return firststart
     end
     function api.cclite.setScreenSize( w, h )
+        if type(w) ~= "number" then
+			error( "bad argument #1 (expected number, got " .. type( w ) .. ")", 2 )
+		end
+        if type(h) ~= "number" then
+			error( "bad argument #2 (expected number, got " .. type( h ) .. ")", 2 )
+		end
         _conf.terminal_width = math.floor(w)
         _conf.terminal_height = math.floor(h)
         Screen.sWidth = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
@@ -742,6 +748,38 @@ if _conf.enableAPI_cclite then
         end
         table.insert(Computer.eventQueue, {"term_resize"})
         print("Resize Window to ".._conf.terminal_width.." and ".._conf.terminal_height)
+    end
+    function api.cclite.setScale(scale)
+        if type(scale) ~= "number" then
+			error( "bad argument #1 (expected number, got " .. type( scale ) .. ")", 2 )
+		end
+        _conf.terminal_guiScale = scale
+        Screen.sWidth = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)
+        Screen.sHeight = (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2) 
+        Screen.pixelWidth = _conf.terminal_guiScale * 6
+	    Screen.pixelHeight = _conf.terminal_guiScale * 9  
+        love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), {vsync = false,resizable=_conf.allow_resize})
+        print("Set Scale to "..scale)
+    end
+    function api.cclite.mountDisk(id,sSide)
+        if not love.filesystem.exists("data/"..id.."/") then
+		    love.filesystem.createDirectory("data/"..id.."/")
+	    end
+        local sDiskMount
+        if not love.filesystem.exists("data/".._conf.id.."/disk") and not Computer.disks["disk"] then
+		    sDiskMount = "disk"
+        else
+            local cou = 2
+            while true do
+                if not love.filesystem.exists("data/".._conf.id.."/disk"..cou) and not Computer.disks["disk"..cou]then
+		            sDiskMount = "disk"..cou
+                    break
+                end
+                cou = cou + 1
+            end
+	    end
+        vfs.mount("/data/"..id.."/","/"..sDiskMount,"hdd")
+        Computer.disks[sDiskMount] = true
     end
 end
 
@@ -1767,6 +1805,8 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
             getSaveDirectory = api.cclite.getSaveDirectory,
             isFirstRun = api.cclite.isFirstRun,
             setScreenSize = api.cclite.setScreenSize,
+            setScale = api.cclite.setScale,
+            mountDisk = api.cclite.mountDisk,
 		}
 	end
     if _conf.enableAPI_love then

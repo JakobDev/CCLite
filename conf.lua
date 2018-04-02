@@ -7,5 +7,5 @@ function love.conf(t)
 	t.modules.physics = false
 	t.modules.sound = true
 	t.modules.math = false
-    t.version = "0.10.1"
+    t.version = "11.0"
 end
