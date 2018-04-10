@@ -1,7 +1,7 @@
 local function printUsage()
     print( "Usages:" )
     print( "title get" )
-    print( "titelt set <text>" )
+    print( "title set <text>" )
 end
 
 local tArgs = { ... }

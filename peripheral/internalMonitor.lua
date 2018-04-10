@@ -7,6 +7,8 @@ function peripheral.base.internalMonitor()
         tMethods[k] = v
         table.insert(tMethodList,k)
     end
+    table.insert(tMethodList,"setTextScale")
+    tMethods.setTextScale = function() end
 	function obj.getMethods() return tMethodList end
 	function obj.ccliteGetMethods() return {} end
 	function obj.call(sMethod, ...)

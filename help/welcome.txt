@@ -1,0 +1,1 @@
+welcome start when CCLite runs first. It gives some Information about the emulator.

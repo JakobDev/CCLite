@@ -1,0 +1,4 @@
+scale change the scaleof the screen
+
+ex:
+"scale scale" change the scale of the screen

@@ -1,0 +1,13 @@
+print([[Changes in CCLite 5.0:
+-Add Support for Plugins
+-Add cclite.mountDisk(id)
+-Add cclite.unmountDisk(path)
+-Add cclite.listPlugins()
+-Add cclite.isNewVersion()
+-Add mount program
+-Add unmount program
+-Add plugins program
+-Add changelog Program
+-Add help files for all built-in programs
+-CCLite shows now the Changelog after a Update to a new Version
+-Update welcome.lua]])

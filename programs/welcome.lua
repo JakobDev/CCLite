@@ -52,6 +52,16 @@ tContent[count]["text"] = "You can use the built-in program \"perman\" to attach
 
 local count = #tContent+1
 tContent[count] = {}
+tContent[count]["titel"] = "Edit Files of other Computers"
+tContent[count]["text"] = "You can mount the Filesystem of another Computer by running mount <id>. If you want to unmount the Filesystem run unmount <mountpath>"
+
+local count = #tContent+1
+tContent[count] = {}
+tContent[count]["titel"] = "Use Plugins"
+tContent[count]["text"] = "You can install Plugins by putting them into the Plugins Folder.\n\nIf you want to develop Plugins, take a look at the Wiki of the GitHub Page of CCLIte."
+
+local count = #tContent+1
+tContent[count] = {}
 tContent[count]["titel"] = "Report Bugs/Left Feedback"
 tContent[count]["text"] = "You can report Bugs or left Feedback on the GitHub Issues Page (https://github.com/Wilma456/CCLite/issues), in the Computercraft Forum Thread (http://www.computercraft.info/forums2/index.php?/topic/28773-wipcclite-for-craftos-18/) or you can write a Mail to wilma456@gmx.de."
 

@@ -23,9 +23,11 @@ if type(cclite) == "table" then
         shell.setPath(shell.path()..":/rom/programs/cclite")
         if cclite.isFirstRun() == true then
             shell.run("/rom/programs/cclite/welcome.lua")
+        elseif cclite.isNewVersion() then
+            shell.run("/rom/programs/cclite/changelog.lua")
         end
     end
-    if fs.isDir("/rom/programs/extra") == true then
-        shell.setPath(shell.path()..":/rom/programs/extra")
+    if fs.isDir("/rom/help/cclite") == true then
+        help.setPath( help.path()..":/rom/help/cclite" )
     end
 end

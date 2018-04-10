@@ -1,6 +1,6 @@
 local messageCache = {}
 
-Version = "4.0"
+Version = "5.0"
 
 print("CCLite "..Version)
 --Wrapper must required before all the other ones
@@ -224,8 +224,8 @@ function Computer:start()
 			screen_backgroundColourB[x] = 32768
 		end
 	end
+    api.init()
 	Screen.dirty = true
-	api.init()
 	Computer.state.cursorX = 1
 	Computer.state.cursorY = 1
 	Computer.state.bg = 32768
@@ -347,6 +347,23 @@ end
 return args,options
 end
 
+function loadPlugin(sPath,sName)
+    local fnPlugin,err = loadstring(love.filesystem.read(sPath),"@"..sName)
+    if not fnPlugin then
+        print(err)
+        Screen:message('Error while loading Plugin "'..sName..'"')
+        return
+    end
+    setfenv(fnPlugin,getfenv())
+    local ok,err = pcall(fnPlugin)
+    if not ok then
+        print(err)
+        Screen:message('Error while loading Plugin "'..sName..'"')
+        return
+    end
+    table.insert(tPluginList,sName)
+end
+
 function toboolean(value)
     if value == "true" or value == true then
         return true
@@ -420,6 +437,10 @@ function love.load( args )
     if not wrapper.exists("label/") then
 		love.filesystem.createDirectory("label/")
 	end
+    
+    if not wrapper.exists("plugins/") then
+		love.filesystem.createDirectory("plugins/")
+	end
 
 	if not wrapper.exists("data/"..tostring(_conf.id).."/") then
 		love.filesystem.createDirectory("data/"..tostring(_conf.id).."/") -- Make the user data folder
@@ -432,9 +453,37 @@ function love.load( args )
 	    vfs.mount("/programs","/rom/programs/cclite","rom",true)
     end
     
-    
     vfs.mount("/startup.lua","/rom/autorun/cclite.lua","rom",false)
-    vfs.mount("/help/cclite.txt","/rom/help/cclite.txt","rom",false)
+    vfs.mount("/help","/rom/help/cclite","rom",true)
+    
+    bIsNewVersion = false
+    if not wrapper.exists("/version.txt") then
+        bIsNewVersion = true
+        love.filesystem.write("/version.txt",Version)
+    elseif love.filesystem.read("/version.txt") ~= Version then
+        bIsNewVersion = true
+        love.filesystem.write("/version.txt",Version)
+    end
+
+    tPluginList = {}
+
+    --Load Plugins
+    local plugins = love.filesystem.getDirectoryItems("/plugins")
+    for k,v in ipairs(plugins) do
+        if wrapper.isDirectory("/plugins/"..v) then
+            if not wrapper.exists("/plugins/"..v.."/main.lua") then
+                print("Can't find /plugins/"..v.."/main.lua")
+                Screen:message('Error while loading Plugin "'..v..'"')
+            elseif wrapper.isDirectory("/plugins/"..v.."/main.lua") then
+                print("/plugins/"..v.."/main.lua must be a File")
+                Screen:message('Error while loading Plugin "'..v..'"')
+            else
+                loadPlugin("/plugins/"..v.."/main.lua",v)
+            end
+        else
+            loadPlugin("/plugins/"..v,v)
+        end
+    end
 
 	love.keyboard.setKeyRepeat(true)
 

@@ -1,0 +1,4 @@
+resize change the size of the screen
+
+ex:
+"resize x y" change the size of the screen

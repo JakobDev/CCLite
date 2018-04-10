@@ -761,17 +761,21 @@ if _conf.enableAPI_cclite then
         love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), {vsync = false,resizable=_conf.allow_resize})
         print("Set Scale to "..scale)
     end
-    function api.cclite.mountDisk(id,sSide)
-        if not love.filesystem.exists("data/"..id.."/") then
+    function api.cclite.mountDisk(id)
+        if type(id) ~= "number" then
+			error( "bad argument #1 (expected number, got " .. type( id ) .. ")", 2 )
+		end
+        id = math.floor(id)
+        if not wrapper.exists("data/"..id.."/") then
 		    love.filesystem.createDirectory("data/"..id.."/")
 	    end
         local sDiskMount
-        if not love.filesystem.exists("data/".._conf.id.."/disk") and not Computer.disks["disk"] then
+        if not wrapper.exists("data/".._conf.id.."/disk") and not Computer.disks["disk"] then
 		    sDiskMount = "disk"
         else
             local cou = 2
             while true do
-                if not love.filesystem.exists("data/".._conf.id.."/disk"..cou) and not Computer.disks["disk"..cou]then
+                if not wrapper.exists("data/".._conf.id.."/disk"..cou) and not Computer.disks["disk"..cou]then
 		            sDiskMount = "disk"..cou
                     break
                 end
@@ -780,6 +784,26 @@ if _conf.enableAPI_cclite then
 	    end
         vfs.mount("/data/"..id.."/","/"..sDiskMount,"hdd")
         Computer.disks[sDiskMount] = true
+        return sDiskMount
+    end
+    function api.cclite.unmountDisk(sPath)
+        if type(sPath) ~= "string" then
+			error( "bad argument #1 (expected string, got " .. type( sPath ) .. ")", 2 )
+		end
+        sPath = api.fs.combine(sPath,"")
+        if Computer.disks[sPath] then
+            vfs.unmount("/"..sPath)
+            Computer.disks[sPath] = false
+            return true
+        else
+            return false
+        end
+    end
+    function api.cclite.listPlugins()
+        return tablecopy(tPluginList)
+    end
+    function api.cclite.isNewVersion()
+        return bIsNewVersion
     end
 end
 
@@ -1646,6 +1670,8 @@ _tostring_DB[api.math.randomseed] = "randomseed"
 _tostring_DB[api.getfenv] = "getfenv"
 _tostring_DB[error] = "error"
 
+api.plugins = {}
+
 function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
 	api.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
 	api.env = {
@@ -1807,6 +1833,9 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
             setScreenSize = api.cclite.setScreenSize,
             setScale = api.cclite.setScale,
             mountDisk = api.cclite.mountDisk,
+            unmountDisk = api.cclite.unmountDisk,
+            listPlugins = api.cclite.listPlugins,
+            isNewVersion = api.cclite.isNewVersion,
 		}
 	end
     if _conf.enableAPI_love then
@@ -1822,5 +1851,12 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
         log = print,
         biosPath = function() return _conf.biosPath end,
     }
+    for k,v in pairs(api.plugins) do
+        if type(v) == "table" then
+            api.env[k] = tablecopy(v)
+        else
+            api.env[k] = v
+        end
+    end
 end
 api.init()
