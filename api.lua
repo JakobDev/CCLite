@@ -701,11 +701,10 @@ if _conf.enableAPI_cclite then
         return _conf
     end
     function api.cclite.screenshot()
-        local screenshot = love.graphics.newScreenshot()
         local name = 'CCLite_'..os.time() .. '.png'
+        love.graphics.captureScreenshot("/screenshots/"..name)
         print("Saved Screenshot as "..name)
         Screen:message("Saved Screenshot as "..name)
-        screenshot:encode('png', "/screenshots/"..name)
     end
     function api.cclite.getVersion()
         return Version

@@ -1,6 +1,6 @@
 local messageCache = {}
 
-Version = "5.0"
+Version = "5.1"
 
 print("CCLite "..Version)
 --Wrapper must required before all the other ones
