@@ -1,2 +1,2 @@
-print([[Changes in CCLite 5.1:
--Fix cclite.screenshot()]])
+print([[Changes in CCLite 5.2:
+-Char Number 127 is now displayed correct]])
