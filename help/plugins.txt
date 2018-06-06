@@ -1,1 +1,0 @@
-plugins print a list of all loaded Plugins

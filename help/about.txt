@@ -1,1 +1,0 @@
-about just prints a few information about CCLite

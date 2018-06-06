@@ -1,5 +1,0 @@
-title change the Title of the Window
-
-ex:
-"title get" print the Title of The Window
-"title set foo" set the title of the Window to foo

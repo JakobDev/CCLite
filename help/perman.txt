@@ -1,1 +1,0 @@
-perman can attach and detach peripherals

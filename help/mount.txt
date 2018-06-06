@@ -1,4 +1,0 @@
-mount mounts the Filesystem of another Computer
-
-ex:
-"mount id" will mount the Filesystem of the given ID

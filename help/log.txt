@@ -1,1 +1,0 @@
-log prints a text on the Terminal

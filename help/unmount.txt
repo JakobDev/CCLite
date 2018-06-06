@@ -1,4 +1,0 @@
-unmount removes a Fileystem which is mounted with mount
-
-ex:
-"unmount /disk" unmount the Filesystem which is mounted at /disk
